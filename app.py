@@ -7,6 +7,10 @@ from config import Config
 from models import db, User, UserDetails, Links, LinkTypes, Diet, UserDiets, Meal, MealCategory, MealIngredients, Ingredients, FoodLog, LocalMeals, FoodSchedule
 from seeds import seed_database
 from flask_migrate import Migrate
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 # Inicjalizacja aplikacji Flask
 app = Flask(__name__)
@@ -159,3 +163,13 @@ def get_food_schedules():
 if __name__ == "__main__":
     setup_database()
     app.run(debug=True)
+    
+# ==================== ERROR HANDLERY =============================
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({"error": "Not Found"}), 404
+    
+@app.errorhandler(400)
+def bad_request(error):
+    return jsonify({"error": "Bad Request"}), 400
+
