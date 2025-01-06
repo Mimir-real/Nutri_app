@@ -162,26 +162,37 @@ class MealIngredients(db.Model):
 
 class Ingredients(db.Model):
     __tablename__ = 'ingredients'
-    id = db.Column(db.Integer, primary_key=True)
-    description = db.Column(db.String(255))
-    kcal = db.Column(db.SmallInteger)
-    protein = db.Column(db.SmallInteger)
-    carbs = db.Column(db.SmallInteger)
-    fat = db.Column(db.SmallInteger)
-    brand = db.Column(db.String(255))
+    id = db.Column(db.Integer, primary_key=True, unique=True)
+    product_name = db.Column(db.String(255))
+    generic_name = db.Column(db.String(255))
+    kcal_100g = db.Column(db.SmallInteger)
+    protein_100g = db.Column(db.SmallInteger)
+    carbs_100g = db.Column(db.SmallInteger)
+    fat_100g = db.Column(db.SmallInteger)
+    brand = db.Column(db.String(255), unique=True)
     barcode = db.Column(db.String(255))
+    image_url = db.Column(db.String(255))
+    labels_tags = db.Column(db.String(255))
+    product_quantity = db.Column(db.Integer)
+    allergens = db.Column(db.String(255))
 
     def to_dict(self):
         return {
             'id': self.id,
-            'description': self.description,
-            'kcal': self.kcal,
-            'protein': self.protein,
-            'carbs': self.carbs,
-            'fat': self.fat,
+            'product_name': self.product_name,
+            'generic_name': self.generic_name,
+            'kcal_100g': self.kcal_100g,
+            'protein_100g': self.protein_100g,
+            'carbs_100g': self.carbs_100g,
+            'fat_100g': self.fat_100g,
             'brand': self.brand,
-            'barcode': self.barcode
+            'barcode': self.barcode,
+            'image_url': self.image_url,
+            'labels_tags': self.labels_tags,
+            'product_quantity': self.product_quantity,
+            'allergens': self.allergens,
         }
+
 
 # MODELE LOKALNE
 class FoodLog(db.Model):

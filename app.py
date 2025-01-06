@@ -8,10 +8,12 @@ from models import db, User, UserDetails, Links, LinkTypes, Diet, UserDiets, Mea
 from seeds import seed_database
 from flask_migrate import Migrate
 from dotenv import load_dotenv
+from db_import import import_database
 import os
 import uuid
 
 load_dotenv()
+import_time = False
 
 # Inicjalizacja aplikacji Flask
 app = Flask(__name__)
@@ -23,6 +25,10 @@ migrate = Migrate(app, db)
 def setup_database():
     with app.app_context():
         db.create_all()
+        if import_time:
+            print('Importing database, this may take a while')
+            import_database()
+            print('Importing completed')
         seed_database()
 
 # Registration Form
