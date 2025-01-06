@@ -29,7 +29,7 @@ def setup_database():
             print('Importing database, this may take a while')
             import_database()
             print('Importing completed')
-        seed_database()
+        #seed_database()
 
 # Registration Form
 class RegistrationForm(FlaskForm):
@@ -382,6 +382,19 @@ def get_ingredients():
 def get_ingredient_by_id(ing_id):
     ingredient = Ingredients.query.get_or_404(ing_id)
     return jsonify(ingredient.to_dict())
+
+@app.route('/ingredients/search/<query>')
+def search_ingredients(query):
+    # Use ilike for case-insensitive search
+    results = Ingredients.query.filter(
+        Ingredients.product_name.ilike(f"%{query}%") | Ingredients.generic_name.ilike(f"%{query}%") | Ingredients.generic_name.ilike(f"%{query}%")
+    ).all()
+    
+    # Return all fields in the row
+    return jsonify([{
+        column.name: getattr(item, column.name)
+        for column in Ingredients.__table__.columns
+    } for item in results])
 
 # # ==================== FOOD LOG CRUD ====================
 # @app.route('/food_logs', methods=['POST'])
