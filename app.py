@@ -9,6 +9,7 @@ from seeds import seed_database
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 import os
+import uuid
 
 load_dotenv()
 
@@ -52,14 +53,28 @@ def create_user():
         new_user = User(
             email=data['email'], 
             password=data['password'], 
-            email_confirmed=data.get('email_confirmed', False), 
-            active=data.get('active', True)
+            email_confirmed=False,
+            active=False
         )
 
         db.session.add(new_user)
         db.session.commit()
 
-        return jsonify({"message": "User created", "user_id": new_user.id}), 201
+        # Generate a unique activation code
+        activation_code = str(uuid.uuid4())
+
+        # Save the activation code in the Links table
+        activation_link = Links(
+            user_id=new_user.id,
+            code=activation_code,
+            type_id=1,  # 1 = activation link (in the LinkTypes table, type = "Invite")
+            used=False
+        )
+
+        db.session.add(activation_link)
+        db.session.commit()
+
+        return jsonify({"message": "User created", "user_id": new_user.id, "activation_code (wyświetlane dla celów prezentacyjnych)": activation_code}), 201
 
     except ValueError as e:
         # W przypadku, gdy 'email' lub 'password' są puste, zwroc blad 400 (Bad Request)
@@ -69,62 +84,146 @@ def create_user():
         # W przypadku innych bledow, zwroc blad 500 (Internal Server Error)
         return jsonify({"error": "An error occurred while creating the user", "message": str(e)}), 500
 
-
-    # 1. Co robi `email_confirmed=data.get('email_confirmed', False)`? Te pole domyslnie przy tworzeniu powinno byc False, a potem mozna zmienic na True w endpointcie potwierdzajacym email
-    # 2. Tak samo z active - False, True po potwierdzeniu, mozliwosc zmiany na False w endpointcie /users/id/deactivate wymagajacym np.: podania hasla do konta
-
 @app.route('/users', methods=['GET'])
 def get_users():
     users = User.query.all()
-    return jsonify([{ "id": user.id, "email": user.email, "active": user.active } for user in users])
+    users_list = [user.to_dict() for user in users]
+    return jsonify(users_list)
 
-@app.route('/users/<int:user_id>', methods=['PUT'])
-def update_user(user_id):
-    data = request.get_json()
+@app.route('/users/<int:user_id>', methods=['GET'])
+def get_user(user_id):
     user = User.query.get_or_404(user_id)
+    return jsonify(user.to_dict())
 
-    # 1. Czy email powinien móc być zmieniany? 
-    # Jeśli tak:
-    # - to czy nie powinno być sprawdzane, czy nowy email nie jest już zajęty
-    # - czy nie powinno być wysyłane nowe potwierdzenie emaila
-    # - wysyłanie ponownie potwierdzenia emaila w przypadku zmiany emaila (brak tabeli z kodami etc - trzeba też dodać)
 
-    user.email = data.get('email', user.email)
-    user.active = data.get('active', user.active)
+@app.route('/users/<int:user_id>/activate', methods=['GET'])
+def activate_user(user_id):
+    code = request.args.get('code')
+    email = request.args.get('email')
+
+    if not code or not email:
+        return jsonify({"error": "Code and email are required"}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    if user.email != email:
+        return jsonify({"error": "Email does not match"}), 400
+
+    link = Links.query.filter_by(user_id=user_id, code=code).first()
+    if not link:
+        return jsonify({"error": "Invalid code"}), 400
+
+    user.active = True
+    user.email_confirmed = True
+    db.session.delete(link)
     db.session.commit()
-    return jsonify({"message": "User updated"})
+
+    return jsonify({"message": "User activated successfully"}), 200
 
 @app.route('/users/<int:user_id>', methods=['DELETE'])
-def delete_user(user_id):
+def deactivate_user(user_id):
+    data = request.get_json()
+    password = data.get('password')
+
+    if not password:
+        return jsonify({"error": "Password is required"}), 400
+
     user = User.query.get_or_404(user_id)
 
-    # 1. Wiem że to jest przykład, ale raczej przy usuwaniu konta też powinno być wymagane hasło do konta jako potwierdzenie
+    if user.password != password:
+        return jsonify({"error": "Incorrect password"}), 401
 
-    db.session.delete(user)
+    user.active = False
     db.session.commit()
-    return jsonify({"message": "User deleted"})
+    return jsonify({"message": "User deactivated"})
 
 # ==================== USER DETAILS CRUD ====================
 
-#1. Brak możliwości edycji danych użytkownika - brak PUT/PATCH dla user_details?
-@app.route('/user_details', methods=['POST'])
-def create_user_details():
+@app.route('/user_details/<int:user_id>', methods=['POST'])
+def create_user_details(user_id):
     data = request.get_json()
 
-    # 1. Dlaczego akurat tylko tych danych WYMAGAMY? Wszystko jest opcjonalne, ale połowa jest podana, a połowa jak *_goal z modelu zignorowana
+    if not user_id:
+        return jsonify({"error": "user_id is required"}), 400
 
-    new_details = UserDetails(user_id=data['user_id'], age=data['age'], gender=data['gender'], height=data['height'], weight=data['weight'])
-    db.session.add(new_details)
+    details = UserDetails.query.get(user_id)
+    if details:
+        return jsonify({"error": "User details already exist"}), 400
+
+    gender = data.get('gender', 'X')
+    if gender not in ['F', 'M', 'X']:
+        return jsonify({"error": "Invalid gender value"}), 400
+
+    age = data.get('age', 0)
+    height = data.get('height', 0.0)
+    weight = data.get('weight', 0.0)
+    kcal_goal = data.get('kcal_goal', 0)
+    fat_goal = data.get('fat_goal', 0)
+    protein_goal = data.get('protein_goal', 0)
+    carb_goal = data.get('carb_goal', 0)
+
+    if any(value < 0 for value in [age, height, weight, kcal_goal, fat_goal, protein_goal, carb_goal]):
+        return jsonify({"error": "Age, height, weight, and goals must be greater than or equal to 0"}), 400
+
+    # Create new UserDetails
+    details = UserDetails(
+        user_id=user_id,
+        age=age,
+        gender=gender,
+        height=height,
+        weight=weight,
+        kcal_goal=kcal_goal,
+        fat_goal=fat_goal,
+        protein_goal=protein_goal,
+        carb_goal=carb_goal
+    )
+    db.session.add(details)
     db.session.commit()
-    return jsonify({"message": "User details created"}), 201
+    return jsonify({"message": "User details created successfully"}), 201
+
+@app.route('/user_details/<int:user_id>', methods=['PUT', 'PATCH'])
+def update_user_details(user_id):
+    data = request.get_json()
+
+    if not user_id:
+        return jsonify({"error": "user_id is required"}), 400
+
+    details = UserDetails.query.get_or_404(user_id)
+
+    gender = data.get('gender', details.gender)
+    if gender not in ['F', 'M', 'X']:
+        return jsonify({"error": "Invalid gender value"}), 400
+
+    age = data.get('age', details.age)
+    height = data.get('height', details.height)
+    weight = data.get('weight', details.weight)
+    kcal_goal = data.get('kcal_goal', details.kcal_goal)
+    fat_goal = data.get('fat_goal', details.fat_goal)
+    protein_goal = data.get('protein_goal', details.protein_goal)
+    carb_goal = data.get('carb_goal', details.carb_goal)
+
+    if any(value < 0 for value in [age, height, weight, kcal_goal, fat_goal, protein_goal, carb_goal]):
+        return jsonify({"error": "Age, height, weight, and goals must be greater than or equal to 0"}), 400
+
+    # Update existing UserDetails
+    details.age = age
+    details.gender = gender
+    details.height = height
+    details.weight = weight
+    details.kcal_goal = kcal_goal
+    details.fat_goal = fat_goal
+    details.protein_goal = protein_goal
+    details.carb_goal = carb_goal
+
+    db.session.commit()
+    return jsonify({"message": "User details updated successfully"}), 200
 
 @app.route('/user_details/<int:user_id>', methods=['GET'])
 def get_user_details(user_id):
     details = UserDetails.query.get_or_404(user_id)
-
-    # 1. Dlaczego akurat wypisujemy tylko te dane? A nie wszystkie
-
-    return jsonify({"user_id": details.user_id, "age": details.age, "gender": details.gender})
+    return jsonify(details.to_dict())
 
 # ==================== DIET CRUD ====================
 @app.route('/diets', methods=['POST'])
@@ -138,34 +237,123 @@ def create_diet():
 @app.route('/diets', methods=['GET'])
 def get_diets():
     diets = Diet.query.all()
-    return jsonify([{ "id": diet.id, "name": diet.name, "description": diet.description } for diet in diets])
+    return jsonify([diet.to_dict() for diet in diets])
+
+@app.route('/diets/<int:diet_id>', methods=['GET'])
+def get_diet(diet_id):
+    diet = Diet.query.get_or_404(diet_id)
+    return jsonify(diet.to_dict())
 
 # ==================== MEAL CRUD ====================
-
-# 1. Ogólnie, jaki tu jest zamysł dodawania posiłku? 
-# - Dodajemy składniki przy dodawaniu posiłku? Nie ma tutaj takich danych
-# - Dodajemy składniki po stworzeniu danych bazowych? W takim przypadku brakuje endpointu do dodawania składników do posiłku
-
-# 2. Brak możliwości edycji posiłku - brak PUT/PATCH dla posiłku? Przy aktualizacji powinien być zwiększany version
 
 @app.route('/meals', methods=['POST'])
 def create_meal():
     data = request.get_json()
 
-    # 1. Przy tworzeniu version = 1, a nie dowolny lub 1 jeśli nie podano
-    # 2. W prawdziwej sytuacji creator_id powinno być pobierane z sesji zalogowanego użytkownika
-    # 3. Brak pól np.: category_id, ingredients (jw. jeżeli dodajemy składniki przy tworzeniu posiłku), diet_id
+    # Validate required fields
+    if not data.get('name') or not data.get('creator_id'):
+        return jsonify({"error": "Name and creator_id are required"}), 400
+    
+    # Zakładamy że w sesji jest zapisane user_id (creator_id)
+    # My bierzemy je z body dla celów prezentacyjnych
+    creator_id = data.get('creator_id')
 
-    new_meal = Meal(name=data['name'], description=data.get('description'), creator_id=data['creator_id'], version=data.get('version', 1))
+    # Create new meal
+    new_meal = Meal(
+        name=data.get('name'),
+        description=data.get('description', ""),
+        creator_id=creator_id,
+        diet_id=data.get('diet_id'),
+        category_id=data.get('category_id'),
+        version=1,
+        last_update=datetime.utcnow()
+    )
     db.session.add(new_meal)
     db.session.commit()
+
+
+    ingredients = data.get('ingredients', [])
+    # Tutaj 
+    # TODO
+    # Zaimportować składniki z zewnętrznej bazy danych OpenFoodFacts
+    imported_ingredients = []
+
+    # Add ingredients if provided
+    for ingredient in imported_ingredients:
+        meal_ingredient = MealIngredients(
+            meal_id=new_meal.id,
+            ingredient_id=ingredient['ingredient_id'],
+            unit=ingredient['unit'],
+            quantity=ingredient['quantity']
+        )
+        db.session.add(meal_ingredient)
+
+    db.session.commit()
     return jsonify({"message": "Meal created", "meal_id": new_meal.id}), 201
+
+@app.route('/meals/<int:meal_id>', methods=['PUT', 'PATCH'])
+def update_meal(meal_id):
+    data = request.get_json()
+
+    # Fetch the meal to be updated
+    meal = Meal.query.get_or_404(meal_id)
+
+    # Update meal details
+    meal.name = data.get('name', meal.name)
+    meal.description = data.get('description', meal.description)
+    meal.diet_id = data.get('diet_id', meal.diet_id)
+    meal.category_id = data.get('category_id', meal.category_id)
+    meal.version += 1
+    meal.last_update = datetime.utcnow()
+
+    db.session.commit()
+
+    # TODO: Do odkomentowania i implementacji po dodaniu integracji z OpenFoodFacts
+    # # Update ingredients if provided
+    # if 'ingredients' in data:
+    #     # Remove existing ingredients
+    #     MealIngredients.query.filter_by(meal_id=meal.id).delete()
+    #     # Add new ingredients
+    #     for ingredient in data['ingredients']:
+    #         meal_ingredient = MealIngredients(
+    #             meal_id=meal.id,
+    #             ingredient_id=ingredient['ingredient_id'],
+    #             unit=ingredient['unit'],
+    #             quantity=ingredient['quantity']
+    #         )
+    #         db.session.add(meal_ingredient)
+
+    db.session.commit()
+    return jsonify({"message": "Meal updated", "meal_id": meal.id}), 200
 
 @app.route('/meals', methods=['GET'])
 def get_meals():
     meals = Meal.query.all()
-    # 1. Dlaczego zwracamy tylko id, name, description? A nie wszystko? np.: creator_id, version, category_id, ingredients
-    return jsonify([{ "id": meal.id, "name": meal.name, "description": meal.description } for meal in meals])
+    return jsonify([meal.to_dict() for meal in meals])
+
+@app.route('/meals/<int:meal_id>', methods=['GET'])
+def get_meal(meal_id):
+    meal = Meal.query.get_or_404(meal_id)
+    return jsonify(meal.to_dict())
+
+@app.route('/meals/<int:meal_id>/ingredients', methods=['GET'])
+def get_meal_ingredients(meal_id):
+    # Fetch meal ingredients with actual ingredient details
+    ingredients = db.session.query(MealIngredients, Ingredients).join(Ingredients, MealIngredients.ingredient_id == Ingredients.id).filter(MealIngredients.meal_id == meal_id).all()
+
+    # Map the results to a list of dictionaries
+    result = []
+    for meal_ingredient, ingredient in ingredients:
+        result.append({
+            'id': meal_ingredient.id,
+            'meal_id': meal_ingredient.meal_id,
+            'ingredient_id': meal_ingredient.ingredient_id,
+            'quantity': meal_ingredient.quantity,
+            'unit': meal_ingredient.unit,
+            'ingredient': ingredient.to_dict()
+        })
+
+    return jsonify(result)
 
 @app.route('/meals/<int:meal_id>', methods=['DELETE'])
 def delete_meal(meal_id):
@@ -175,52 +363,47 @@ def delete_meal(meal_id):
     return jsonify({"message": "Meal deleted"})
 
 # ==================== INGREDIENT CRUD ====================
-@app.route('/ingredients', methods=['POST'])
-def create_ingredient():
 
-    # 1. To nie powinien być endpoint - składniki do naszej bazy powinny być importowane z zewnętrznej bazy OpenFoodFacts
-
-    data = request.get_json()
-    new_ingredient = Ingredients(description=data['description'], kcal=data['kcal'], protein=data['protein'], carbs=data['carbs'], fat=data['fat'])
-    db.session.add(new_ingredient)
-    db.session.commit()
-    return jsonify({"message": "Ingredient created", "ingredient_id": new_ingredient.id}), 201
+# Brak POST dla składników - Składniki będą dodawane z formularza dodawania/aktualizacji posiłku
+# Składniki wybrane w posiłku będą importowane do bazy danych z zewnętrznej bazy OpenFoodFacts
 
 @app.route('/ingredients', methods=['GET'])
 def get_ingredients():
     ingredients = Ingredients.query.all()
-    
-    # 1. Dlaczego zwracamy tylko id, description, kcal? A nie wszystko? np.: protein, carbs, fat
+    return jsonify([ing.to_dict() for ing in ingredients])
 
-    return jsonify([{ "id": ing.id, "description": ing.description, "kcal": ing.kcal } for ing in ingredients])
+@app.route('/ingredients/<int:ing_id>', methods=['GET'])
+def get_ingredient_by_id(ing_id):
+    ingredient = Ingredients.query.get_or_404(ing_id)
+    return jsonify(ingredient.to_dict())
 
-# ==================== FOOD LOG CRUD ====================
-@app.route('/food_logs', methods=['POST'])
-def create_food_log():
-    data = request.get_json()
-    new_log = FoodLog(local_meal_id=data['local_meal_id'], portion=data['portion'], at=data['at'])
-    db.session.add(new_log)
-    db.session.commit()
-    return jsonify({"message": "Food log created", "food_log_id": new_log.id}), 201
+# # ==================== FOOD LOG CRUD ====================
+# @app.route('/food_logs', methods=['POST'])
+# def create_food_log():
+#     data = request.get_json()
+#     new_log = FoodLog(local_meal_id=data['local_meal_id'], portion=data['portion'], at=data['at'])
+#     db.session.add(new_log)
+#     db.session.commit()
+#     return jsonify({"message": "Food log created", "food_log_id": new_log.id}), 201
 
-@app.route('/food_logs', methods=['GET'])
-def get_food_logs():
-    logs = FoodLog.query.all()
-    return jsonify([{ "id": log.id, "portion": log.portion, "at": log.at } for log in logs])
+# @app.route('/food_logs', methods=['GET'])
+# def get_food_logs():
+#     logs = FoodLog.query.all()
+#     return jsonify([log.to_dict() for log in logs])
 
-# ==================== FOOD SCHEDULE CRUD ====================
-@app.route('/food_schedules', methods=['POST'])
-def create_food_schedule():
-    data = request.get_json()
-    new_schedule = FoodSchedule(local_meal_id=data['local_meal_id'], at=data['at'])
-    db.session.add(new_schedule)
-    db.session.commit()
-    return jsonify({"message": "Food schedule created", "schedule_id": new_schedule.id}), 201
+# # ==================== FOOD SCHEDULE CRUD ====================
+# @app.route('/food_schedules', methods=['POST'])
+# def create_food_schedule():
+#     data = request.get_json()
+#     new_schedule = FoodSchedule(local_meal_id=data['local_meal_id'], at=data['at'])
+#     db.session.add(new_schedule)
+#     db.session.commit()
+#     return jsonify({"message": "Food schedule created", "schedule_id": new_schedule.id}), 201
 
-@app.route('/food_schedules', methods=['GET'])
-def get_food_schedules():
-    schedules = FoodSchedule.query.all()
-    return jsonify([{ "id": s.id, "local_meal_id": s.local_meal_id, "at": s.at } for s in schedules])
+# @app.route('/food_schedules', methods=['GET'])
+# def get_food_schedules():
+#     schedules = FoodSchedule.query.all()
+#     return jsonify([s.to_dict() for s in schedules])
 
 # ==================== URUCHOMIENIE APLIKACJI ====================
 if __name__ == "__main__":
