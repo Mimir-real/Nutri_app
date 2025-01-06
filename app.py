@@ -42,6 +42,11 @@ class RegistrationForm(FlaskForm):
 @app.route('/users', methods=['POST'])
 def create_user():
     data = request.get_json()
+
+    # 1. Brak błędów przy braku pól jak email czy password => return jsonify({"error": "Bad Request", message: "Brak pola XYZ"}), 400
+    # 2. Co robi `email_confirmed=data.get('email_confirmed', False)`? Te pole domyślnie przy tworzeniu powinno być False, a potem można zmienić na True w endpointcie potwierdzającym email
+    # 3. Tak samo z active - False, True po potwierdzeniu, możliwość zmiany na False w endpointcie /users/id/deactivate wymagającym np.: podania hasła do konta
+
     new_user = User(email=data['email'], password=data['password'], email_confirmed=data.get('email_confirmed', False), active=data.get('active', True))
     db.session.add(new_user)
     db.session.commit()
@@ -56,6 +61,13 @@ def get_users():
 def update_user(user_id):
     data = request.get_json()
     user = User.query.get_or_404(user_id)
+
+    # 1. Czy email powinien móc być zmieniany? 
+    # Jeśli tak:
+    # - to czy nie powinno być sprawdzane, czy nowy email nie jest już zajęty
+    # - czy nie powinno być wysyłane nowe potwierdzenie emaila
+    # - wysyłanie ponownie potwierdzenia emaila w przypadku zmiany emaila (brak tabeli z kodami etc - trzeba też dodać)
+
     user.email = data.get('email', user.email)
     user.active = data.get('active', user.active)
     db.session.commit()
@@ -64,14 +76,22 @@ def update_user(user_id):
 @app.route('/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
     user = User.query.get_or_404(user_id)
+
+    # 1. Wiem że to jest przykład, ale raczej przy usuwaniu konta też powinno być wymagane hasło do konta jako potwierdzenie
+
     db.session.delete(user)
     db.session.commit()
     return jsonify({"message": "User deleted"})
 
 # ==================== USER DETAILS CRUD ====================
+
+#1. Brak możliwości edycji danych użytkownika - brak PUT/PATCH dla user_details?
 @app.route('/user_details', methods=['POST'])
 def create_user_details():
     data = request.get_json()
+
+    # 1. Dlaczego akurat tylko tych danych WYMAGAMY? Wszystko jest opcjonalne, ale połowa jest podana, a połowa jak *_goal z modelu zignorowana
+
     new_details = UserDetails(user_id=data['user_id'], age=data['age'], gender=data['gender'], height=data['height'], weight=data['weight'])
     db.session.add(new_details)
     db.session.commit()
@@ -80,6 +100,9 @@ def create_user_details():
 @app.route('/user_details/<int:user_id>', methods=['GET'])
 def get_user_details(user_id):
     details = UserDetails.query.get_or_404(user_id)
+
+    # 1. Dlaczego akurat wypisujemy tylko te dane? A nie wszystkie
+
     return jsonify({"user_id": details.user_id, "age": details.age, "gender": details.gender})
 
 # ==================== DIET CRUD ====================
@@ -97,9 +120,21 @@ def get_diets():
     return jsonify([{ "id": diet.id, "name": diet.name, "description": diet.description } for diet in diets])
 
 # ==================== MEAL CRUD ====================
+
+# 1. Ogólnie, jaki tu jest zamysł dodawania posiłku? 
+# - Dodajemy składniki przy dodawaniu posiłku? Nie ma tutaj takich danych
+# - Dodajemy składniki po stworzeniu danych bazowych? W takim przypadku brakuje endpointu do dodawania składników do posiłku
+
+# 2. Brak możliwości edycji posiłku - brak PUT/PATCH dla posiłku? Przy aktualizacji powinien być zwiększany version
+
 @app.route('/meals', methods=['POST'])
 def create_meal():
     data = request.get_json()
+
+    # 1. Przy tworzeniu version = 1, a nie dowolny lub 1 jeśli nie podano
+    # 2. W prawdziwej sytuacji creator_id powinno być pobierane z sesji zalogowanego użytkownika
+    # 3. Brak pól np.: category_id, ingredients (jw. jeżeli dodajemy składniki przy tworzeniu posiłku), diet_id
+
     new_meal = Meal(name=data['name'], description=data.get('description'), creator_id=data['creator_id'], version=data.get('version', 1))
     db.session.add(new_meal)
     db.session.commit()
@@ -108,6 +143,7 @@ def create_meal():
 @app.route('/meals', methods=['GET'])
 def get_meals():
     meals = Meal.query.all()
+    # 1. Dlaczego zwracamy tylko id, name, description? A nie wszystko? np.: creator_id, version, category_id, ingredients
     return jsonify([{ "id": meal.id, "name": meal.name, "description": meal.description } for meal in meals])
 
 @app.route('/meals/<int:meal_id>', methods=['DELETE'])
@@ -120,6 +156,9 @@ def delete_meal(meal_id):
 # ==================== INGREDIENT CRUD ====================
 @app.route('/ingredients', methods=['POST'])
 def create_ingredient():
+
+    # 1. To nie powinien być endpoint - składniki do naszej bazy powinny być importowane z zewnętrznej bazy OpenFoodFacts
+
     data = request.get_json()
     new_ingredient = Ingredients(description=data['description'], kcal=data['kcal'], protein=data['protein'], carbs=data['carbs'], fat=data['fat'])
     db.session.add(new_ingredient)
@@ -129,6 +168,9 @@ def create_ingredient():
 @app.route('/ingredients', methods=['GET'])
 def get_ingredients():
     ingredients = Ingredients.query.all()
+    
+    # 1. Dlaczego zwracamy tylko id, description, kcal? A nie wszystko? np.: protein, carbs, fat
+
     return jsonify([{ "id": ing.id, "description": ing.description, "kcal": ing.kcal } for ing in ingredients])
 
 # ==================== FOOD LOG CRUD ====================
