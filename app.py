@@ -41,11 +41,34 @@ class RegistrationForm(FlaskForm):
 # ==================== USER CRUD ====================
 @app.route('/users', methods=['POST'])
 def create_user():
-    data = request.get_json()
-    new_user = User(email=data['email'], password=data['password'], email_confirmed=data.get('email_confirmed', False), active=data.get('active', True))
-    db.session.add(new_user)
-    db.session.commit()
-    return jsonify({"message": "User created", "user_id": new_user.id}), 201
+    try:
+        data = request.get_json()
+
+        # Sprawdzamy, czy pola 'email' i 'password' są puste
+        if not data.get('email') or not data.get('password'):
+            raise ValueError("Email and password are required")
+
+        # Tworzymy nowego uzytkownika
+        new_user = User(
+            email=data['email'], 
+            password=data['password'], 
+            email_confirmed=data.get('email_confirmed', False), 
+            active=data.get('active', True)
+        )
+
+        db.session.add(new_user)
+        db.session.commit()
+
+        return jsonify({"message": "User created", "user_id": new_user.id}), 201
+
+    except ValueError as e:
+        # W przypadku, gdy 'email' lub 'password' są puste, zwroc blad 400 (Bad Request)
+        return jsonify({"error": str(e)}), 400
+    
+    except Exception as e:
+        # W przypadku innych bledow, zwroc blad 500 (Internal Server Error)
+        return jsonify({"error": "An error occurred while creating the user", "message": str(e)}), 500
+
 
 @app.route('/users', methods=['GET'])
 def get_users():
