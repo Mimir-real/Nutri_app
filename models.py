@@ -169,7 +169,7 @@ class Ingredients(db.Model):
     protein_100g = db.Column(db.SmallInteger)
     carbs_100g = db.Column(db.SmallInteger)
     fat_100g = db.Column(db.SmallInteger)
-    brand = db.Column(db.String(255), unique=True)
+    brand = db.Column(db.String(255))
     barcode = db.Column(db.String(255))
     image_url = db.Column(db.String(255))
     labels_tags = db.Column(db.String(255))
