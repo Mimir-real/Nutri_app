@@ -52,8 +52,8 @@ def seed_database():
     db.session.commit()
 
     # Tworzenie składników
-    ingredient1 = Ingredients(description="Chicken breast", kcal=165, protein=31, carbs=0, fat=3, brand="BrandA", barcode="123456")
-    ingredient2 = Ingredients(description="Broccoli", kcal=55, protein=4, carbs=11, fat=0, brand="BrandB", barcode="789012")
+    ingredient1 = Ingredients(product_name="Chicken breast", kcal_100g=165, protein_100g=31, carbs_100g=0, fat_100g=3, brand="BrandA", barcode="123456")
+    ingredient2 = Ingredients(product_name="Broccoli", kcal_100g=55, protein_100g=4, carbs_100g=11, fat_100g=0, brand="BrandB", barcode="789012")
     
     db.session.add_all([ingredient1, ingredient2])
     db.session.commit()
