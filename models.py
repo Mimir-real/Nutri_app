@@ -163,18 +163,18 @@ class MealIngredients(db.Model):
 class Ingredients(db.Model):
     __tablename__ = 'ingredients'
     id = db.Column(db.Integer, primary_key=True, unique=True)
-    product_name = db.Column(db.String(255))
-    generic_name = db.Column(db.String(255))
-    kcal_100g = db.Column(db.SmallInteger)
-    protein_100g = db.Column(db.SmallInteger)
-    carbs_100g = db.Column(db.SmallInteger)
-    fat_100g = db.Column(db.SmallInteger)
-    brand = db.Column(db.String(255))
-    barcode = db.Column(db.String(255))
-    image_url = db.Column(db.String(255))
-    labels_tags = db.Column(db.String(255))
-    product_quantity = db.Column(db.Integer)
-    allergens = db.Column(db.String(255))
+    product_name = db.Column(db.String)
+    generic_name = db.Column(db.String)
+    kcal_100g = db.Column(db.Float)
+    protein_100g = db.Column(db.Float)
+    carbs_100g = db.Column(db.Float)
+    fat_100g = db.Column(db.Float)
+    brand = db.Column(db.String)
+    barcode = db.Column(db.String)
+    image_url = db.Column(db.String)
+    labels_tags = db.Column(db.String)
+    product_quantity = db.Column(db.Float)
+    allergens = db.Column(db.String)
 
     def to_dict(self):
         return {
