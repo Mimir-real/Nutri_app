@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from db_import import import_database
 import os
 import uuid
+from sqlalchemy import func
 
 load_dotenv()
 import_time = False
@@ -386,10 +387,10 @@ def get_ingredient_by_id(ing_id):
 @app.route('/ingredients/search/<query>')
 def search_ingredients(query):
     top = request.args.get('top', default=10, type=int)
-
-    # Use ilike for case-insensitive search
+    
+    # Use full-text search for better matching
     results = Ingredients.query.filter(
-        Ingredients.product_name.ilike(f"%{query}%") | Ingredients.generic_name.ilike(f"%{query}%") | Ingredients.generic_name.ilike(f"%{query}%")
+        func.to_tsvector('english', Ingredients.product_name + ' ' + Ingredients.generic_name).match(query)
     ).limit(top).all()
     
     # Return all fields in the row

@@ -1,4 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func, event, Index
+from sqlalchemy.dialects.postgresql import TSVECTOR
 
 db = SQLAlchemy()
 
@@ -175,6 +177,11 @@ class Ingredients(db.Model):
     labels_tags = db.Column(db.String)
     product_quantity = db.Column(db.Float)
     allergens = db.Column(db.String)
+    tsv = db.Column(TSVECTOR)  # Dodaj kolumnę tsv
+
+    __table_args__ = (
+        Index('tsv_idx', 'tsv', postgresql_using='gin'),
+    )
 
     def to_dict(self):
         return {
@@ -192,6 +199,18 @@ class Ingredients(db.Model):
             'product_quantity': self.product_quantity,
             'allergens': self.allergens,
         }
+
+# Funkcja do aktualizacji kolumny tsv
+def update_tsvector(mapper, connection, target):
+    connection.execute(
+        Ingredients.__table__.update().
+        where(Ingredients.id == target.id).
+        values(tsv=func.to_tsvector('english', target.product_name + ' ' + target.generic_name))
+    )
+
+# Wyzwalacz do aktualizacji kolumny tsv przy każdej zmianie danych
+event.listen(Ingredients, 'after_insert', update_tsvector)
+event.listen(Ingredients, 'after_update', update_tsvector)
 
 
 # MODELE LOKALNE
