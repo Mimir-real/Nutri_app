@@ -3,12 +3,12 @@ import gzip
 import sys
 from models import db, Ingredients
 
-csv.field_size_limit(sys.maxsize)
+csv.field_size_limit(2**31 - 1)
 
 
 # https://openfoodfacts-ds.s3.eu-west-3.amazonaws.com/en.openfoodfacts.org.products.csv.gz
 def import_database():
-    with gzip.open('en.openfoodfacts.org.products.csv.gz', 'rt') as f:
+    with gzip.open('en.openfoodfacts.org.products.csv.gz', 'rt', encoding='utf-8') as f:
         reader = csv.DictReader(f, delimiter='\t', quoting=csv.QUOTE_NONE)
         i = 0
         for p in reader:
