@@ -385,10 +385,12 @@ def get_ingredient_by_id(ing_id):
 
 @app.route('/ingredients/search/<query>')
 def search_ingredients(query):
+    top = request.args.get('top', default=10, type=int)
+
     # Use ilike for case-insensitive search
     results = Ingredients.query.filter(
         Ingredients.product_name.ilike(f"%{query}%") | Ingredients.generic_name.ilike(f"%{query}%") | Ingredients.generic_name.ilike(f"%{query}%")
-    ).all()
+    ).limit(top).all()
     
     # Return all fields in the row
     return jsonify([{
