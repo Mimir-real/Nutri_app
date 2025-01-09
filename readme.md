@@ -21,17 +21,17 @@ Aby uruchomić projekt, musisz mieć zainstalowane poniższe narzędzia:
 
 # Instalacja
 
-    Sklonuj repozytorium:
+Sklonuj repozytorium:
 
-git clone https://github.com/Mimir-real/bazany_danych_proj.git
-cd bazany_danych_proj
+    git clone https://github.com/Mimir-real/bazany_danych_proj.git
+    cd bazany_danych_proj
 
 ## Utwórz i aktywuj wirtualne środowisko:
 
 ### Na systemie Windows:
 
-python -m venv venv
-.\venv\Scripts\activate
+    python -m venv venv
+    .\venv\Scripts\activate
 
 ### Na systemie macOS/Linux:
 
@@ -101,15 +101,18 @@ Jeśli jeszcze tego nie zrobiłeś, zainstaluj bibliotekę python-dotenv:
 
 Uruchomienie
 
-    Inicjalizacja bazy danych:
+Inicjalizacja bazy danych:
 
-    Zanim uruchomisz aplikację, musisz upewnić się, że baza danych jest poprawnie skonfigurowana i tabele są utworzone. Możesz to zrobić uruchamiając migracje w Flasku:
+Zanim uruchomisz aplikację, musisz upewnić się, że baza danych jest poprawnie skonfigurowana i tabele są utworzone. Możesz to zrobić uruchamiając migracje w Flasku:
 ```
 flask db init        # Tworzy folder migrations
 flask db migrate     # Generuje pliki migracji
 flask db upgrade     # Aplikuje migracje do bazy danych
 ```
 Jeśli używasz PostgreSQL, upewnij się, że masz dostęp do bazy danych, którą utworzyłeś wcześniej.
+
+Zaimportowanie bazy z produktami spożywczymi:
+    python3 app.py dbinit
 
 # Uruchom aplikację:
 
