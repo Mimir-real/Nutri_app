@@ -155,6 +155,8 @@ class MealIngredients(db.Model):
     unit = db.Column(db.String(255))
     quantity = db.Column(db.Float)
 
+    __table_args__ = (UniqueConstraint('meal_id', 'ingredient_id', name='_meal_ingredient_uc'),)
+
     def to_dict(self):
         return {
             'id': self.id,

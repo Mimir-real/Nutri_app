@@ -303,6 +303,22 @@ def get_user_diets(user_id):
 
 # ==================== MEAL CRUD ====================
 
+@app.route('/meals', methods=['GET'])
+def get_meals():
+    limit = request.args.get('limit', default=10, type=int)
+    page = request.args.get('page', default=1, type=int)
+
+    if limit < 1 or page < 1:
+        return jsonify({"error": "Limit and page must be positive integers"}), 400
+
+    meals = Meal.query.paginate(page, limit, False).items
+    return jsonify([meal.to_dict() for meal in meals])
+
+@app.route('/meals/<int:meal_id>', methods=['GET'])
+def get_meal(meal_id):
+    meal = Meal.query.get_or_404(meal_id)
+    return jsonify(meal.to_dict())
+
 @app.route('/meals', methods=['POST'])
 def create_meal():
     data = request.get_json()
@@ -315,22 +331,34 @@ def create_meal():
     # My bierzemy je z body dla celów prezentacyjnych
     creator_id = data.get('creator_id')
 
+    # Validate category_id
+    category_id = data.get('category_id')
+    if category_id:
+        category = MealCategory.query.get(category_id)
+        if not category:
+            return jsonify({"error": "Category not found"}), 404
+
+    # Validate diet_id
+    diet_id = data.get('diet_id')
+    if diet_id:
+        diet = Diet.query.get(diet_id)
+        if not diet:
+            return jsonify({"error": "Diet not found"}), 404
+
     # Create new meal
     new_meal = Meal(
         name=data.get('name'),
         description=data.get('description', ""),
         creator_id=creator_id,
-        diet_id=data.get('diet_id'),
-        category_id=data.get('category_id'),
+        diet_id=diet_id,
+        category_id=category_id,
         version=1,
         last_update=datetime.utcnow()
     )
     db.session.add(new_meal)
     db.session.commit()
 
-
     ingredients = data.get('ingredients', [])
-    
     for ingredient in ingredients:
         meal_ingredient = MealIngredients(
             meal_id=new_meal.id,
@@ -343,9 +371,13 @@ def create_meal():
     db.session.commit()
     return jsonify({"message": "Meal created", "meal_id": new_meal.id}), 201
 
+# Aktualizacja danych posiłku, ale bez zmiany składników
 @app.route('/meals/<int:meal_id>', methods=['PUT', 'PATCH'])
 def update_meal(meal_id):
     data = request.get_json()
+    
+    if data.get('ingredients'):
+        return jsonify({"error": "To update ingredients, use the /meals/<meal_id>/ingredients endpoint"}), 400
 
     # Fetch the meal to be updated
     meal = Meal.query.get_or_404(meal_id)
@@ -359,53 +391,7 @@ def update_meal(meal_id):
     meal.last_update = datetime.utcnow()
 
     db.session.commit()
-
-    # TODO: Do odkomentowania i implementacji po dodaniu integracji z OpenFoodFacts
-    # # Update ingredients if provided
-    # if 'ingredients' in data:
-    #     # Remove existing ingredients
-    #     MealIngredients.query.filter_by(meal_id=meal.id).delete()
-    #     # Add new ingredients
-    #     for ingredient in data['ingredients']:
-    #         meal_ingredient = MealIngredients(
-    #             meal_id=meal.id,
-    #             ingredient_id=ingredient['ingredient_id'],
-    #             unit=ingredient['unit'],
-    #             quantity=ingredient['quantity']
-    #         )
-    #         db.session.add(meal_ingredient)
-
-    db.session.commit()
     return jsonify({"message": "Meal updated", "meal_id": meal.id}), 200
-
-@app.route('/meals', methods=['GET'])
-def get_meals():
-    meals = Meal.query.all()
-    return jsonify([meal.to_dict() for meal in meals])
-
-@app.route('/meals/<int:meal_id>', methods=['GET'])
-def get_meal(meal_id):
-    meal = Meal.query.get_or_404(meal_id)
-    return jsonify(meal.to_dict())
-
-@app.route('/meals/<int:meal_id>/ingredients', methods=['GET'])
-def get_meal_ingredients(meal_id):
-    # Fetch meal ingredients with actual ingredient details
-    ingredients = db.session.query(MealIngredients, Ingredients).join(Ingredients, MealIngredients.ingredient_id == Ingredients.id).filter(MealIngredients.meal_id == meal_id).all()
-
-    # Map the results to a list of dictionaries
-    result = []
-    for meal_ingredient, ingredient in ingredients:
-        result.append({
-            'id': meal_ingredient.id,
-            'meal_id': meal_ingredient.meal_id,
-            'ingredient_id': meal_ingredient.ingredient_id,
-            'quantity': meal_ingredient.quantity,
-            'unit': meal_ingredient.unit,
-            'ingredient': ingredient.to_dict()
-        })
-
-    return jsonify(result)
 
 @app.route('/meals/<int:meal_id>', methods=['DELETE'])
 def delete_meal(meal_id):
@@ -414,7 +400,201 @@ def delete_meal(meal_id):
     db.session.commit()
     return jsonify({"message": "Meal deleted"})
 
-# ==================== INGREDIENT CRUD ====================
+# ==================== MEAL + MEAL CATEGORY ====================
+
+@app.route('/meals/<int:meal_id>/category', methods=['POST'])
+def assign_category_to_meal(meal_id):
+    data = request.get_json()
+    if not data.get('category_id'):
+        return jsonify({"error": "category_id is required"}), 400
+
+    meal = Meal.query.get_or_404(meal_id)
+    if meal.category_id is not None:
+        return jsonify({"error": "Category is already assigned to this meal"}), 400
+
+    category = MealCategory.query.get_or_404(data['category_id'])
+
+    meal.version += 1
+    meal.category_id = category.id
+    db.session.commit()
+
+    return jsonify({"message": "Category assigned to meal"}), 200
+
+@app.route('/meals/<int:meal_id>/category', methods=['DELETE'])
+def remove_category_from_meal(meal_id):
+    meal = Meal.query.get_or_404(meal_id)
+    if meal.category_id is None:
+        return jsonify({"error": "No category assigned to this meal"}), 400
+
+    meal.category_id = None
+    db.session.commit()
+
+    return jsonify({"message": "Category removed from meal"}), 200
+
+@app.route('/meals/<int:meal_id>/category', methods=['PUT'])
+def update_category_of_meal(meal_id):
+    data = request.get_json()
+    if not data.get('category_id'):
+        return jsonify({"error": "category_id is required"}), 400
+
+    meal = Meal.query.get_or_404(meal_id)
+    if meal.category_id is None:
+        return jsonify({"error": "No category assigned to this meal"}), 400
+
+    category = MealCategory.query.get_or_404(data['category_id'])
+
+    meal.version += 1
+    meal.category_id = category.id
+    db.session.commit()
+
+    return jsonify({"message": "Category updated for meal"}), 200
+
+# ==================== MEAL + DIET ====================
+
+@app.route('/meals/<int:meal_id>/diet', methods=['POST'])
+def assign_diet_to_meal(meal_id):
+    data = request.get_json()
+    if not data.get('diet_id'):
+        return jsonify({"error": "diet_id is required"}), 400
+
+    meal = Meal.query.get_or_404(meal_id)
+    if meal.diet_id is not None:
+        return jsonify({"error": "Diet is already assigned to this meal"}), 400
+
+    diet = Diet.query.get_or_404(data['diet_id'])
+
+    meal.version += 1
+    meal.diet_id = diet.id
+    db.session.commit()
+
+    return jsonify({"message": "Diet assigned to meal"}), 200
+
+@app.route('/meals/<int:meal_id>/diet', methods=['DELETE'])
+def remove_diet_from_meal(meal_id):
+    meal = Meal.query.get_or_404(meal_id)
+    if meal.diet_id is None:
+        return jsonify({"error": "No diet assigned to this meal"}), 400
+
+    meal.version += 1
+    meal.diet_id = None
+    db.session.commit()
+
+    return jsonify({"message": "Diet removed from meal"}), 200
+
+@app.route('/meals/<int:meal_id>/diet', methods=['PUT'])
+def update_diet_of_meal(meal_id):
+    data = request.get_json()
+    if not data.get('diet_id'):
+        return jsonify({"error": "diet_id is required"}), 400
+
+    meal = Meal.query.get_or_404(meal_id)
+    if meal.diet_id is None:
+        return jsonify({"error": "No diet assigned to this meal"}), 400
+
+    diet = Diet.query.get_or_404(data['diet_id'])
+
+    meal.version += 1
+    meal.diet_id = diet.id
+    db.session.commit()
+
+    return jsonify({"message": "Diet updated for meal"}), 200
+
+# ==================== MEAL + INGREDIENTS ==================== 
+
+@app.route('/meals/<int:meal_id>/ingredients', methods=['GET'])
+def get_meal_ingredients(meal_id):
+    # Fetch meal ingredients with actual ingredient details
+    results = db.session.query(MealIngredients, Ingredients).join(Ingredients, MealIngredients.ingredient_id == Ingredients.id).filter(MealIngredients.meal_id == meal_id).all()
+
+    # Map the results to a list of dictionaries
+    ingredients = []
+    for meal_ingredient, ingredient in results:
+        ingredient_dict = {
+            'ingredient': ingredient.to_dict(),
+            'details': meal_ingredient.to_dict()
+        }
+        ingredients.append(ingredient_dict)
+
+    return jsonify(ingredients)
+
+# Zastępowanie całej listy składników posiłku
+@app.route('/meals/<int:meal_id>/ingredients', methods=['PUT'])
+def replace_meal_ingredients(meal_id):
+    data = request.get_json()
+
+    if data.get('ingredients') is None:
+        return jsonify({"error": "Ingredients list is required"}), 400
+    ingredients = data['ingredients']
+
+    # Usuń istniejące składniki posiłku
+    MealIngredients.query.filter_by(meal_id=meal_id).delete()
+
+    # Dodaj nowe składniki
+    for ingredient_data in ingredients:
+        ingredient = MealIngredients(
+            meal_id=meal_id,
+            ingredient_id=ingredient_data['ingredient_id'],
+            unit=ingredient_data['unit'],
+            quantity=ingredient_data['quantity']
+        )
+        db.session.add(ingredient)
+
+    # Zaktualizuj wersję posiłku
+    meal = Meal.query.get_or_404(meal_id)
+    meal.version += 1
+
+    db.session.commit()
+    return jsonify({"message": "Meal ingredients updated successfully"}), 200
+
+# Dodawanie nowego składnika do posiłku
+@app.route('/meals/<int:meal_id>/ingredients', methods=['POST'])
+def add_meal_ingredient(meal_id):
+    data = request.get_json()
+    
+    if not data.get('ingredient_id') or not data.get('unit') or not data.get('quantity'):
+        return jsonify({"error": "ingredient_id, unit, and quantity are required"}), 400
+
+    ingredient = MealIngredients(
+        meal_id=meal_id,
+        ingredient_id=data['ingredient_id'],
+        unit=data['unit'],
+        quantity=data['quantity']
+    )
+    db.session.add(ingredient)
+
+    try:
+        meal = Meal.query.get_or_404(meal_id)
+        meal.version += 1
+
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"error": "This ingredient is already assigned to the meal"}), 400
+
+    return jsonify({"message": "Ingredient added successfully"}), 201
+
+# Usuwanie składnika z posiłku
+@app.route('/meals/<int:meal_id>/ingredients/<int:ingredient_id>', methods=['DELETE'])
+def remove_meal_ingredient(meal_id, ingredient_id):
+    ingredient = MealIngredients.query.filter_by(meal_id=meal_id, ingredient_id=ingredient_id).first()
+    if not ingredient:
+        return jsonify({"error": "Ingredient not found in meal"}), 404
+
+    db.session.delete(ingredient)
+
+    try:
+        # Zaktualizuj wersję posiłku
+        meal = Meal.query.get_or_404(meal_id)
+        meal.version += 1
+
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"error": "Failed to remove ingredient"}), 400
+
+    return jsonify({"message": "Ingredient removed successfully"}), 200
+
+# ==================== INGREDIENT ====================
 
 # Brak POST dla składników - Składniki będą dodawane z formularza dodawania/aktualizacji posiłku
 # Składniki wybrane w posiłku będą importowane do bazy danych z zewnętrznej bazy OpenFoodFacts
