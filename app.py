@@ -62,7 +62,7 @@ def create_user():
         if not data.get('email') or not data.get('password'):
             raise ValueError("Email and password are required")
 
-        # Tworzymy nowego uzytkownika
+        # Tworzymy nowego użytkownika
         new_user = User(
             email=data['email'], 
             password=data['password'], 
@@ -90,11 +90,16 @@ def create_user():
         return jsonify({"message": "User created", "user_id": new_user.id, "activation_code (wyświetlane dla celów prezentacyjnych)": activation_code}), 201
 
     except ValueError as e:
-        # W przypadku, gdy 'email' lub 'password' są puste, zwroc blad 400 (Bad Request)
+        # W przypadku, gdy 'email' lub 'password' są puste, zwróć błąd 400 (Bad Request)
         return jsonify({"error": str(e)}), 400
     
+    except IntegrityError as e:
+        # W przypadku naruszenia unikalności, zwróć błąd 400 (Bad Request)
+        db.session.rollback()
+        return jsonify({"error": "User with this email already exists"}), 400
+    
     except Exception as e:
-        # W przypadku innych bledow, zwroc blad 500 (Internal Server Error)
+        # W przypadku innych błędów, zwróć błąd 500 (Internal Server Error)
         return jsonify({"error": "An error occurred while creating the user", "message": str(e)}), 500
 
 @app.route('/users', methods=['GET'])
