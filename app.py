@@ -104,15 +104,26 @@ def create_user():
 
 @app.route('/users', methods=['GET'])
 def get_users():
-    users = User.query.all()
-    users_list = [user.to_dict() for user in users]
-    return jsonify(users_list)
+    limit = request.args.get('limit', default=10, type=int)
+    page = request.args.get('page', default=1, type=int)
+
+    if limit < 1 or page < 1:
+        return jsonify({"error": "Limit and page must be positive integers"}), 400
+
+    users_pagination = User.query.paginate(page=page, per_page=limit, max_per_page=100, error_out=False)
+    users = users_pagination.items
+    return jsonify({
+        "users": [user.to_dict() for user in users],
+        "total": users_pagination.total,
+        "pages": users_pagination.pages,
+        "current_page": users_pagination.page,
+        "page_size": users_pagination.per_page
+    })
 
 @app.route('/users/<int:user_id>', methods=['GET'])
 def get_user(user_id):
     user = User.query.get_or_404(user_id)
     return jsonify(user.to_dict())
-
 
 @app.route('/users/<int:user_id>/activate', methods=['GET'])
 def activate_user(user_id):
@@ -254,8 +265,21 @@ def create_diet():
 
 @app.route('/diets', methods=['GET'])
 def get_diets():
-    diets = Diet.query.all()
-    return jsonify([diet.to_dict() for diet in diets])
+    limit = request.args.get('limit', default=10, type=int)
+    page = request.args.get('page', default=1, type=int)
+
+    if limit < 1 or page < 1:
+        return jsonify({"error": "Limit and page must be positive integers"}), 400
+
+    diets_pagination = Diet.query.paginate(page=page, per_page=limit, max_per_page=100, error_out=False)
+    diets = diets_pagination.items
+    return jsonify({
+        "diets": [diet.to_dict() for diet in diets],
+        "total": diets_pagination.total,
+        "pages": diets_pagination.pages,
+        "current_page": diets_pagination.page,
+        "page_size": diets_pagination.per_page
+    })
 
 @app.route('/diets/<int:diet_id>', methods=['GET'])
 def get_diet(diet_id):
@@ -302,7 +326,6 @@ def get_user_diets(user_id):
     return jsonify([ud.to_dict() for ud in user_diets])
 
 # ==================== MEAL CRUD ====================
-
 @app.route('/meals', methods=['GET'])
 def get_meals():
     limit = request.args.get('limit', default=10, type=int)
@@ -311,8 +334,15 @@ def get_meals():
     if limit < 1 or page < 1:
         return jsonify({"error": "Limit and page must be positive integers"}), 400
 
-    meals = Meal.query.paginate(page, limit, False).items
-    return jsonify([meal.to_dict() for meal in meals])
+    meals_pagination = Meal.query.paginate(page=page, per_page=limit, max_per_page=100, error_out=False)
+    meals = meals_pagination.items
+    return jsonify({
+        "meals": [meal.to_dict() for meal in meals],
+        "total": meals_pagination.total,
+        "pages": meals_pagination.pages,
+        "current_page": meals_pagination.page,
+        "page_size": meals_pagination.per_page
+    })
 
 @app.route('/meals/<int:meal_id>', methods=['GET'])
 def get_meal(meal_id):
@@ -601,8 +631,21 @@ def remove_meal_ingredient(meal_id, ingredient_id):
 
 @app.route('/ingredients', methods=['GET'])
 def get_ingredients():
-    ingredients = Ingredients.query.all()
-    return jsonify([ing.to_dict() for ing in ingredients])
+    limit = request.args.get('limit', default=10, type=int)
+    page = request.args.get('page', default=1, type=int)
+
+    if limit < 1 or page < 1:
+        return jsonify({"error": "Limit and page must be positive integers"}), 400
+
+    ingredients_pagination = Ingredients.query.paginate(page=page, per_page=limit, max_per_page=100, error_out=False)
+    ingredients = ingredients_pagination.items
+    return jsonify({
+        "ingredients": [ing.to_dict() for ing in ingredients],
+        "total": ingredients_pagination.total,
+        "pages": ingredients_pagination.pages,
+        "current_page": ingredients_pagination.page,
+        "page_size": ingredients_pagination.per_page
+    })
 
 @app.route('/ingredients/<int:ing_id>', methods=['GET'])
 def get_ingredient_by_id(ing_id):
