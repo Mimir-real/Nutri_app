@@ -325,13 +325,8 @@ def create_meal():
 
 
     ingredients = data.get('ingredients', [])
-    # Tutaj 
-    # TODO
-    # Zaimportować składniki z zewnętrznej bazy danych OpenFoodFacts
-    imported_ingredients = []
-
-    # Add ingredients if provided
-    for ingredient in imported_ingredients:
+    
+    for ingredient in ingredients:
         meal_ingredient = MealIngredients(
             meal_id=new_meal.id,
             ingredient_id=ingredient['ingredient_id'],
