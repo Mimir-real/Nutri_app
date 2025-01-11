@@ -51,44 +51,44 @@ def seed_database():
     db.session.add_all([category1, category2])
     db.session.commit()
 
-    # Tworzenie składników
-    ingredient1 = Ingredients(product_name="Chicken breast", kcal_100g=165, protein_100g=31, carbs_100g=0, fat_100g=3, brand="BrandA", barcode="123456")
-    ingredient2 = Ingredients(product_name="Broccoli", kcal_100g=55, protein_100g=4, carbs_100g=11, fat_100g=0, brand="BrandB", barcode="789012")
+    # # Tworzenie składników
+    # ingredient1 = Ingredients(product_name="Chicken breast", kcal_100g=165, protein_100g=31, carbs_100g=0, fat_100g=3, brand="BrandA", barcode="123456")
+    # ingredient2 = Ingredients(product_name="Broccoli", kcal_100g=55, protein_100g=4, carbs_100g=11, fat_100g=0, brand="BrandB", barcode="789012")
     
-    db.session.add_all([ingredient1, ingredient2])
-    db.session.commit()
+    # db.session.add_all([ingredient1, ingredient2])
+    # db.session.commit()
 
-    # Tworzenie posiłków
-    meal1 = Meal(name="Chicken Salad", description="Grilled chicken with mixed greens", creator_id=user1.id, diet_id=diet1.id, category_id=category1.id, version=1, last_update=datetime.utcnow())
-    meal2 = Meal(name="Vegan Buddha Bowl", description="A variety of vegetables with quinoa", creator_id=user2.id, diet_id=diet2.id, category_id=category2.id, version=1, last_update=datetime.utcnow())
+    # # Tworzenie posiłków
+    # meal1 = Meal(name="Chicken Salad", description="Grilled chicken with mixed greens", creator_id=user1.id, diet_id=diet1.id, category_id=category1.id, version=1, last_update=datetime.utcnow())
+    # meal2 = Meal(name="Vegan Buddha Bowl", description="A variety of vegetables with quinoa", creator_id=user2.id, diet_id=diet2.id, category_id=category2.id, version=1, last_update=datetime.utcnow())
     
-    db.session.add_all([meal1, meal2])
-    db.session.commit()
+    # db.session.add_all([meal1, meal2])
+    # db.session.commit()
 
-    # Przypisywanie składników do posiłków
-    meal_ingredient1 = MealIngredients(meal_id=meal1.id, ingredient_id=ingredient1.id, unit="g", quantity=200)
-    meal_ingredient2 = MealIngredients(meal_id=meal2.id, ingredient_id=ingredient2.id, unit="g", quantity=150)
+    # # Przypisywanie składników do posiłków
+    # meal_ingredient1 = MealIngredients(meal_id=meal1.id, ingredient_id=ingredient1.id, unit="g", quantity=200)
+    # meal_ingredient2 = MealIngredients(meal_id=meal2.id, ingredient_id=ingredient2.id, unit="g", quantity=150)
     
-    db.session.add_all([meal_ingredient1, meal_ingredient2])
-    db.session.commit()
+    # db.session.add_all([meal_ingredient1, meal_ingredient2])
+    # db.session.commit()
 
-    # Tworzenie lokalnych posiłków
-    local_meal1 = LocalMeals(composition=1, meal_id=meal1.id, meal_version=1)
-    local_meal2 = LocalMeals(composition=2, meal_id=meal2.id, meal_version=1)
+    # # Tworzenie lokalnych posiłków
+    # local_meal1 = LocalMeals(composition=1, meal_id=meal1.id, meal_version=1)
+    # local_meal2 = LocalMeals(composition=2, meal_id=meal2.id, meal_version=1)
     
-    db.session.add_all([local_meal1, local_meal2])
-    db.session.commit()
+    # db.session.add_all([local_meal1, local_meal2])
+    # db.session.commit()
 
-    # Tworzenie harmonogramów posiłków
-    food_schedule1 = FoodSchedule(local_meal_id=local_meal1.id, at=datetime(2024, 12, 28, 8, 30))
-    food_schedule2 = FoodSchedule(local_meal_id=local_meal2.id, at=datetime(2024, 12, 28, 12, 30))
+    # # Tworzenie harmonogramów posiłków
+    # food_schedule1 = FoodSchedule(local_meal_id=local_meal1.id, at=datetime(2024, 12, 28, 8, 30))
+    # food_schedule2 = FoodSchedule(local_meal_id=local_meal2.id, at=datetime(2024, 12, 28, 12, 30))
     
-    db.session.add_all([food_schedule1, food_schedule2])
-    db.session.commit()
+    # db.session.add_all([food_schedule1, food_schedule2])
+    # db.session.commit()
 
-    # Tworzenie logów żywnościowych
-    food_log1 = FoodLog(local_meal_id=local_meal1.id, portion=1, at=datetime.utcnow())
-    food_log2 = FoodLog(local_meal_id=local_meal2.id, portion=1.5, at=datetime.utcnow())
+    # # Tworzenie logów żywnościowych
+    # food_log1 = FoodLog(local_meal_id=local_meal1.id, portion=1, at=datetime.utcnow())
+    # food_log2 = FoodLog(local_meal_id=local_meal2.id, portion=1.5, at=datetime.utcnow())
     
-    db.session.add_all([food_log1, food_log2])
-    db.session.commit()
+    # db.session.add_all([food_log1, food_log2])
+    # db.session.commit()

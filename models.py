@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import func, event, Index
+from sqlalchemy import func, event, Index, UniqueConstraint
 from sqlalchemy.dialects.postgresql import TSVECTOR
 
 db = SQLAlchemy()
@@ -97,9 +97,11 @@ class Diet(db.Model):
 class UserDiets(db.Model):
     __tablename__ = 'user_diets'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    diet_id = db.Column(db.Integer, db.ForeignKey('diet.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    diet_id = db.Column(db.Integer, db.ForeignKey('diet.id'), nullable=False)
     allowed = db.Column(db.Boolean, default=True)
+
+    __table_args__ = (UniqueConstraint('user_id', 'diet_id', name='_user_diet_uc'),)
 
     def to_dict(self):
         return {
