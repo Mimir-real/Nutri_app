@@ -1,14 +1,14 @@
 import symbol from './images/bazy zdjecie.png';
-import './login.css';
+import './register.css';
 
-function Login() {
+function Register() {
 
 return (
     <div className="loginComponent">
         <img className='symbolImage' src={symbol} alt="symbol" />
         <div className="loginContainer">
 
-            <h1 className='formHeader'>LOGOWANIE</h1>
+            <h1 className='formHeader'>REJESTRACJA</h1>
       
             <form>
                 <label>
@@ -19,10 +19,13 @@ return (
                     <p className="formLabel" >Hasło</p>
                     <input className="formInput" type="password" />
                 </label>
-                <a href="#" className="forgotPassword">Zapomniałeś hasła?</a>
+                <label>
+                    <p className="formLabel" >Powtórz hasło</p>
+                    <input className="formInput" type="password" />
+                </label>
                 <div className='buttonContainter'>
-                    <button className='loginButton' type="submit">ZALOGUJ SIĘ</button>
-                    <button className='registerButton' type="submit">UTWÓRZ KONTO</button>
+                    <button className='loginButton' type="submit">UTWÓRZ KONTO</button>
+                    <button className='registerButton' type="submit">POWRÓT</button>
                 </div>
                 </form>
         </div>
@@ -32,4 +35,4 @@ return (
 
 }
 
-export default Login;
+export default Register;
