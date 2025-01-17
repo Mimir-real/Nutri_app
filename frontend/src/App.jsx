@@ -4,6 +4,9 @@ import viteLogo from '/vite.svg'
 import './App.css'
 import Login from './components/login'
 import Register from './components/register'
+import MyMeals from './components/myMeals'
+import NewMeal from './components/newMeal'
+import UserData from './components/userData'
 
 function App() {
   
@@ -11,7 +14,7 @@ function App() {
   return (
     <div className="App">
 
-    <Register />
+    <UserData />
     </div>
   )
 }
