@@ -14,18 +14,36 @@ import sys
 import uuid
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
+from werkzeug.security import check_password_hash, generate_password_hash
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_cors import CORS
+from flask_migrate import Migrate
+
 
 load_dotenv()
 
 # Inicjalizacja aplikacji Flask
 app = Flask(__name__)
 app.config.from_object(Config)
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')  # Load from environment variable
 db.init_app(app)
 migrate = Migrate(app, db)
+jwt = JWTManager(app)
+CORS(app)  # Dodaj tę linię, aby włączyć CORS dla całej aplikacji
 
 def seed_base_database():
     with app.app_context():
         seed_database()
+
+def seed_data():
+    with app.app_context():
+        # Call your seed_database function or add your seeding logic here
+        seed_database()
+        print("Database seeded successfully.")
+
+@app.cli.command('seed')
+def seed():
+    seed_data()
 
 # Funkcja do inicjalizacji bazy danych
 def setup_database():
@@ -695,6 +713,54 @@ def search_ingredients(query):
 #     schedules = FoodSchedule.query.all()
 #     return jsonify([s.to_dict() for s in schedules])
 
+
+# ===================== Logowanie ===================================
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+
+    user = User.query.filter_by(email=email).first()
+
+    if user and check_password_hash(user.password, password):
+        access_token = create_access_token(identity=user.id)
+        return jsonify({"message": "Login successful", "access_token": access_token}), 200
+    else:
+        return jsonify({"error": "Invalid email or password"}), 401
+
+# Przykład zabezpieczonego endpointu
+@app.route('/protected', methods=['GET'])
+@jwt_required()
+def protected():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    return jsonify({"message": f"Hello, {user.email}!"}), 200
+
+@app.route('/register', methods['POST'])
+def register():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "User with this email already exists"}), 400
+
+    hashed_password = generate_password_hash(password)
+    new_user = User(email=email, password=hashed_password)
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify({"message": "User registered successfully"}), 201
+
+
 # ==================== URUCHOMIENIE APLIKACJI ====================
 if __name__ == "__main__":
     setup_database()
@@ -708,4 +774,3 @@ def not_found(error):
 @app.errorhandler(400)
 def bad_request(error):
     return jsonify({"error": "Bad Request"}), 400
-
