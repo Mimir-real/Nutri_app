@@ -25,7 +25,7 @@ load_dotenv()
 # Inicjalizacja aplikacji Flask
 app = Flask(__name__)
 app.config.from_object(Config)
-app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'  # Ustaw swój sekret
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')  # Load from environment variable
 db.init_app(app)
 migrate = Migrate(app, db)
 jwt = JWTManager(app)
@@ -34,6 +34,16 @@ CORS(app)  # Dodaj tę linię, aby włączyć CORS dla całej aplikacji
 def seed_base_database():
     with app.app_context():
         seed_database()
+
+def seed_data():
+    with app.app_context():
+        # Call your seed_database function or add your seeding logic here
+        seed_database()
+        print("Database seeded successfully.")
+
+@app.cli.command('seed')
+def seed():
+    seed_data()
 
 # Funkcja do inicjalizacji bazy danych
 def setup_database():
@@ -731,7 +741,7 @@ def protected():
     user = User.query.get(current_user_id)
     return jsonify({"message": f"Hello, {user.email}!"}), 200
 
-@app.route('/register', methods=['POST'])
+@app.route('/register', methods['POST'])
 def register():
     data = request.get_json()
     email = data.get('email')
