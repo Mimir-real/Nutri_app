@@ -1,5 +1,5 @@
 from flask import request, jsonify
-from models import db, Meal, MealCategory, Diet, MealIngredients, MealHistory
+from models import db, Meal, MealCategory, Diet, MealIngredients, MealHistory, UserDiets
 from datetime import datetime
 from sqlalchemy import or_
 
@@ -30,13 +30,27 @@ def search_meals():
     query = request.args.get('query', default='', type=str)
     limit = request.args.get('limit', default=10, type=int)
     page = request.args.get('page', default=1, type=int)
+    user_id = request.args.get('user_id', default=None, type=int)
+    allow_more = request.args.get('allowMore', default=False, type=bool)
 
     if limit < 1 or page < 1:
         return jsonify({"error": "Limit and page must be positive integers"}), 400
 
-    meals_pagination = Meal.query.filter(
-        or_(Meal.name.ilike(f'%{query}%'), Meal.description.ilike(f'%{query}%'))
-    ).paginate(page=page, per_page=limit, max_per_page=100, error_out=False)
+    # Podstawowe filtrowanie na podstawie nazwy i opisu posiłku
+    filters = [or_(Meal.name.ilike(f'%{query}%'), Meal.description.ilike(f'%{query}%'))]
+
+    # Jeśli podano user_id, dodaj filtrowanie na podstawie dozwolonych i zabronionych diet
+    if user_id:
+        allowed_diets = db.session.query(UserDiets.diet_id).filter_by(user_id=user_id, allowed=True).subquery()
+        forbidden_diets = db.session.query(UserDiets.diet_id).filter_by(user_id=user_id, allowed=False).subquery()
+
+        if allow_more:
+            filters.append(~Meal.diet_id.in_(forbidden_diets))
+        else:
+            filters.append(Meal.diet_id.in_(allowed_diets))
+            filters.append(~Meal.diet_id.in_(forbidden_diets))
+
+    meals_pagination = Meal.query.filter(*filters).paginate(page=page, per_page=limit, max_per_page=100, error_out=False)
 
     meals = meals_pagination.items
     return jsonify({
@@ -48,7 +62,6 @@ def search_meals():
     })
 
 # Tworzenie, aktualizacja i usuwanie posiłków
-
 def create_meal():
     data = request.get_json()
 
