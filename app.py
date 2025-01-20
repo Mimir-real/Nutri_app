@@ -22,20 +22,14 @@ migrate = Migrate(app, db)
 jwt = JWTManager(app)
 CORS(app)  # Dodaj tę linię, aby włączyć CORS dla całej aplikacji
 
+@app.cli.command('seed')
+def seed():
+    seed_base_database()
+
 def seed_base_database():
     with app.app_context():
         seed_database()
         pass
-
-def seed_data():
-    with app.app_context():
-        # Call your seed_database function or add your seeding logic here
-        # seed_database()
-        print("Database seeded successfully.")
-
-@app.cli.command('seed')
-def seed():
-    seed_data()
 
 # Funkcja do inicjalizacji bazy danych
 def setup_database():
@@ -51,21 +45,6 @@ def setup_database():
             print('Seeding completed')
         if 'seed' in sys.argv or 'dbimport' in sys.argv or 'importdb' in sys.argv:
             exit()
-
-# Registration Form
-# class RegistrationForm(FlaskForm):
-#     email = StringField('Email', validators=[DataRequired(), Length(max=128)])
-#     password = PasswordField('Password', validators=[DataRequired(), Length(min=4)])
-#     confirm_password = PasswordField(
-#         'Confirm Password', validators=[DataRequired(), EqualTo('password')],
-#     )
-#     submit = SubmitField('Register')
-
-#     def validate_email(self, email):
-#         user = User.query.filter_by(email=email.data).first()
-#         if user:
-#             raise ValidationError('User with that email already exists.')
-
 
 # User Endpoints
 from endpoints.users import create_user, get_users, get_user, activate_user, deactivate_user
@@ -121,7 +100,6 @@ app.add_url_rule('/meals/<int:meal_id>/ingredients', view_func=get_meal_ingredie
 app.add_url_rule('/meals/<int:meal_id>/ingredients', view_func=replace_meal_ingredients, methods=['PUT'])
 app.add_url_rule('/meals/<int:meal_id>/ingredients', view_func=add_meal_ingredient, methods=['POST'])
 app.add_url_rule('/meals/<int:meal_id>/ingredients/<int:ingredient_id>', view_func=remove_meal_ingredient, methods=['DELETE'])
-
 
 # Ingredients Endpoints
 
