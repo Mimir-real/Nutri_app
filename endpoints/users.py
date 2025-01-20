@@ -16,7 +16,8 @@ def create_user():
             email=data['email'], 
             password=data['password'], 
             email_confirmed=False,
-            active=False
+            active=False,
+            created_at=db.func.now()
         )
 
         db.session.add(new_user)
@@ -40,15 +41,18 @@ def create_user():
 
     except ValueError as e:
         # W przypadku, gdy 'email' lub 'password' są puste, zwróć błąd 400 (Bad Request)
+        print('POST /users - ValueError:', e)
         return jsonify({"error": str(e)}), 400
     
     except IntegrityError as e:
         # W przypadku naruszenia unikalności, zwróć błąd 400 (Bad Request)
+        print('POST /users - IntegrityError:', e)
         db.session.rollback()
         return jsonify({"error": "User with this email already exists"}), 400
     
     except Exception as e:
         # W przypadku innych błędów, zwróć błąd 500 (Internal Server Error)
+        print('POST /users - Exception:', e)
         return jsonify({"error": "An error occurred while creating the user", "message": str(e)}), 500
 
 def get_users():
