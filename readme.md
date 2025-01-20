@@ -1,155 +1,170 @@
-Aplikacja do zarządzania dietami, posiłkami i logowaniem żywności. Umożliwia rejestrację użytkowników, przypisywanie diet, tworzenie posiłków, składników oraz śledzenie spożycia posiłków.
-Spis treści
+# Aplikacja do zarządzania dietami
 
-   1. Wymagania
-   2. Instalacja
-   3. Konfiguracja
-   4. Uruchomienie
-   5. Struktura projektu
-   6. Dodawanie danych do bazy
-   7. Wykorzystane technologie
+Aplikacja umożliwia zarządzanie dietami, posiłkami oraz logowaniem żywności. Funkcjonalności obejmują rejestrację użytkowników, przypisywanie diet, tworzenie posiłków, składników oraz śledzenie spożycia.
 
+## Spis treści
 
-# Wymagania
+1. [Wymagania](#wymagania)
+2. [Instalacja](#instalacja)
+3. [Konfiguracja](#konfiguracja)
+4. [Uruchomienie](#uruchomienie)
+5. [Struktura projektu](#struktura-projektu)
+6. [Dodawanie danych do bazy](#dodawanie-danych-do-bazy)
+7. [Wykorzystane technologie](#wykorzystane-technologie)
 
-Aby uruchomić projekt, musisz mieć zainstalowane poniższe narzędzia:
+---
 
-    Python 3.7+
-    pip (Python Package Installer)
-    Virtualenv (zalecane do izolacji środowiska)
-    PostgreSQL (instalacja na maszynie lokalnej lub dostęp do zdalnej bazy PostgreSQL)
+## Wymagania
 
-# Instalacja
+Aby uruchomić projekt, wymagane są:
 
-Sklonuj repozytorium:
+- **Python 3.7+**
+- **pip** (Python Package Installer)
+- **Virtualenv** (zalecane do izolacji środowiska)
+- **PostgreSQL** (instalacja lokalna lub dostęp do zdalnej bazy)
 
-    git clone https://github.com/Mimir-real/bazany_danych_proj.git
-    cd bazany_danych_proj
+---
 
-## Utwórz i aktywuj wirtualne środowisko:
+## Instalacja
 
-### Na systemie Windows:
+1. **Sklonuj repozytorium:**
 
-    python -m venv venv
-    .\venv\Scripts\activate
+   ```bash
+   git clone https://github.com/Mimir-real/bazany_danych_proj.git
+   cd bazany_danych_proj
+   ```
 
-### Na systemie macOS/Linux:
+2. **Utwórz i aktywuj wirtualne środowisko:**
 
-python3 -m venv venv
-source venv/bin/activate
+   **Windows:**
+   ```bash
+   python -m venv venv
+   .\venv\Scripts\activate
+   ```
+   **macOS/Linux:**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
 
-## Zainstaluj zależności:
+3. **Zainstaluj zależności:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-W katalogu głównym repozytorium uruchom:
+4. **Zainstaluj PostgreSQL:**
+   Pobierz i zainstaluj PostgreSQL z oficjalnej strony lub skorzystaj z usługi chmurowej.
 
-pip install -r requirements.txt
+5. **Skonfiguruj bazę danych PostgreSQL:**
 
-To polecenie zainstaluje wszystkie wymagane pakiety, takie jak Flask, Flask-SQLAlchemy, Flask-WTF, python-dotenv i inne zależności.
+   Zaloguj się do PostgreSQL i utwórz nową bazę danych:
+   ```sql
+   CREATE DATABASE bazaDanych;
+   ```
 
-Zainstaluj PostgreSQL:
+6. **Utwórz plik `.env` i skonfiguruj połączenie:**
+   
+   ```plaintext
+   DATABASE_URL=postgresql://postgres:postgres@adresIP:PORT/NazwaBazy
+   SECRET_KEY=your-secret-key
+   ```
+   
+---
 
-Jeśli jeszcze tego nie zrobiłeś, zainstaluj PostgreSQL na swoim komputerze lub skorzystaj z zewnętrznej usługi bazy danych PostgreSQL. Możesz pobrać PostgreSQL tutaj.
+## Konfiguracja
 
-Skonfiguruj bazę danych PostgreSQL:
+1. **Załaduj zmienne środowiskowe w aplikacji:**
 
-    Utwórz bazę danych w PostgreSQL:
+   W pliku `app.py` dodaj:
+   
+   ```python
+   from dotenv import load_dotenv
+   import os
+   
+   load_dotenv()
+   ```
 
-    Zaloguj się do PostgreSQL i utwórz nową bazę danych, na przykład:
+2. **Skonfiguruj połączenie z bazą danych w `config.py`:**
+   
+   ```python
+   class Config:
+       SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
+       SQLALCHEMY_TRACK_MODIFICATIONS = False
+       SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key')
+   ```
 
-    CREATE DATABASE bazaDanych;
+3. **Zainstaluj bibliotekę `python-dotenv`:**
+   
+   ```bash
+   pip install python-dotenv
+   ```
 
-Skonfiguruj połączenie z bazą danych:
+---
 
-Utwórz plik .env w katalogu głównym projektu i ustaw odpowiednie zmienne środowiskowe, takie jak dane dostępowe do bazy danych. Przykład pliku .env:
-```
-    DATABASE_URL=postgresql://postgres:postgres@adresIP:PORT/Nazwa
+## Uruchomienie
 
-    SECRET_KEY=your-secret-key  # Ustaw unikalny klucz do sesji i formularzy
-```
-       DATABASE_URL: Wartość ta powinna zawierać dane do Twojej bazy danych PostgreSQL, w tym nazwę użytkownika, hasło, host, port i nazwę bazy danych.
-        SECRET_KEY: Ustaw unikalny sekret, który będzie używany do sesji i formularzy w aplikacji Flask.
+1. **Inicjalizacja bazy danych:**
 
-    Możesz utworzyć .env ręcznie lub przy pomocy edytora tekstu.
+   ```bash
+   flask db init
+   flask db migrate
+   flask db upgrade
+   ```
 
-Konfiguracja
+2. **Zaimportowanie danych:**
+   
+   ```bash
+   python3 app.py dbinit
+   ```
 
-    Załaduj zmienne środowiskowe:
+3. **Uruchomienie aplikacji:**
+   
+   ```bash
+   flask run
+   ```
+   
+   Aplikacja będzie dostępna pod adresem: `http://127.0.0.1:5000`
 
-    Używamy biblioteki python-dotenv, która automatycznie ładuje dane z pliku .env do aplikacji. Upewnij się, że w Twoim projekcie jest zainstalowana ta biblioteka.
+---
 
-    W kodzie aplikacji, w pliku app.py, dodaj następujący kod do załadowania zmiennych z pliku .env:
+## Struktura projektu
 
-from dotenv import load_dotenv
-import os
-
-load_dotenv()  # Ładuje zmienne z pliku .env
-
-Połączenie z bazą danych:
-
-W pliku config.py, zmień sposób łączenia się z bazą danych, aby korzystał z wartości zawartej w zmiennej środowiskowej DATABASE_URL. Możesz to zrobić, używając os.getenv():
-
-class Config:
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')  # Pobiera URL bazy danych z .env
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key')  # Jeśli SECRET_KEY nie jest ustawiony, używa wartości domyślnej
-
-Zainstaluj bibliotekę python-dotenv:
-
-Jeśli jeszcze tego nie zrobiłeś, zainstaluj bibliotekę python-dotenv:
-
-    pip install python-dotenv
-
-Uruchomienie
-
-Inicjalizacja bazy danych:
-
-Zanim uruchomisz aplikację, musisz upewnić się, że baza danych jest poprawnie skonfigurowana i tabele są utworzone. Możesz to zrobić uruchamiając migracje w Flasku:
-```
-flask db init        # Tworzy folder migrations
-flask db migrate     # Generuje pliki migracji
-flask db upgrade     # Aplikuje migracje do bazy danych
-```
-Jeśli używasz PostgreSQL, upewnij się, że masz dostęp do bazy danych, którą utworzyłeś wcześniej.
-
-Zaimportowanie bazy z produktami spożywczymi:
-    python3 app.py dbinit
-
-# Uruchom aplikację:
-
-Po skonfigurowaniu bazy danych uruchom aplikację:
-
-    flask run
-
-    Domyślnie aplikacja będzie dostępna pod adresem: http://127.0.0.1:5000.
-
-Struktura projektu
 ```
 diet-app/
 │
 ├── app.py                # Główny plik aplikacji Flask
 ├── config.py             # Konfiguracja aplikacji
 ├── models.py             # Modele SQLAlchemy
-├── seeds.py              # Inicjalizacja danych w bazie danych
+├── seeds.py              # Inicjalizacja danych w bazie
 ├── migrations/           # Folder z migracjami bazy danych
-├── .env                  # Plik konfiguracyjny z danymi środowiskowymi
+├── .env                  # Plik konfiguracyjny
 ├── requirements.txt      # Plik z zależnościami
-└── README.md             # Ten plik
+└── README.md             # Dokumentacja projektu
 ```
-# Dodawanie danych do bazy
 
-Po uruchomieniu aplikacji, dane początkowe zostaną załadowane do bazy danych automatycznie, jeśli uruchomisz funkcję setup_database() (zdefiniowaną w seeds.py).
+---
 
-Możesz również ręcznie uruchomić tę funkcję w terminalu, aby załadować dane:
-`
+## Dodawanie danych do bazy
+
+Po uruchomieniu aplikacji dane początkowe zostaną załadowane automatycznie, jeśli wywołasz funkcję `setup_database()` z pliku `seeds.py`.
+
+Możesz ręcznie załadować dane w terminalu:
+
+```python
 from app import setup_database
 setup_database()
-`
-# Wykorzystane technologie
+```
 
-    Flask: Framework webowy do budowy aplikacji w Pythonie.
-    Flask-SQLAlchemy: Rozszerzenie do integracji Flask z SQLAlchemy (ORM).
-    Flask-WTF: Formularze webowe oparte na Flasku.
-    Flask-Migrate: Rozszerzenie do zarządzania migracjami bazy danych.
-    PostgreSQL: Baza danych SQL.
-    python-dotenv: Biblioteka do ładowania zmiennych środowiskowych z pliku .env.
+---
+
+## Wykorzystane technologie
+
+- **Flask** - framework webowy do budowy aplikacji w Pythonie
+- **Flask-SQLAlchemy** - ORM dla bazy danych
+- **Flask-WTF** - obsługa formularzy
+- **Flask-Migrate** - migracje bazy danych
+- **PostgreSQL** - baza danych
+- **python-dotenv** - obsługa zmiennych środowiskowych
+
+---
 
