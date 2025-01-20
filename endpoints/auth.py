@@ -19,20 +19,22 @@ def login():
     else:
         return jsonify({"error": "Invalid email or password"}), 401
     
+# Dlaczego register jak jest users.py -> create_user
 def register():
-    data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
+    pass
+#     data = request.get_json()
+#     email = data.get('email')
+#     password = data.get('password')
 
-    if not email or not password:
-        return jsonify({"error": "Email and password are required"}), 400
+#     if not email or not password:
+#         return jsonify({"error": "Email and password are required"}), 400
 
-    if User.query.filter_by(email=email).first():
-        return jsonify({"error": "User with this email already exists"}), 400
+#     if User.query.filter_by(email=email).first():
+#         return jsonify({"error": "User with this email already exists"}), 400
 
-    hashed_password = generate_password_hash(password)
-    new_user = User(email=email, password=hashed_password)
-    db.session.add(new_user)
-    db.session.commit()
+#     hashed_password = generate_password_hash(password)
+#     new_user = User(email=email, password=hashed_password)
+#     db.session.add(new_user)
+#     db.session.commit()
 
-    return jsonify({"message": "User registered successfully"}), 201
+#     return jsonify({"message": "User registered successfully"}), 201
