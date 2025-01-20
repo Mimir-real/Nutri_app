@@ -1,6 +1,7 @@
 from flask import request, jsonify
 from models import db, Meal, MealCategory, Diet, MealIngredients
 from datetime import datetime
+from sqlalchemy import or_
 
 # Pobieranie posiłków
 
@@ -26,7 +27,25 @@ def get_meal(meal_id):
     return jsonify(meal.to_dict())
 
 def search_meals():
-    pass
+    query = request.args.get('query', default='', type=str)
+    limit = request.args.get('limit', default=10, type=int)
+    page = request.args.get('page', default=1, type=int)
+
+    if limit < 1 or page < 1:
+        return jsonify({"error": "Limit and page must be positive integers"}), 400
+
+    meals_pagination = Meal.query.filter(
+        or_(Meal.name.ilike(f'%{query}%'), Meal.description.ilike(f'%{query}%'))
+    ).paginate(page=page, per_page=limit, max_per_page=100, error_out=False)
+
+    meals = meals_pagination.items
+    return jsonify({
+        "meals": [meal.to_dict() for meal in meals],
+        "total": meals_pagination.total,
+        "pages": meals_pagination.pages,
+        "current_page": meals_pagination.page,
+        "page_size": meals_pagination.per_page
+    })
 
 # Tworzenie, aktualizacja i usuwanie posiłków
 
@@ -77,7 +96,9 @@ def create_meal():
             quantity=ingredient['quantity']
         )
         db.session.add(meal_ingredient)
+    db.session.commit()
 
+    new_meal.save_meal_version()
     db.session.commit()
     return jsonify({"message": "Meal created", "meal_id": new_meal.id}), 201
 
@@ -91,6 +112,9 @@ def update_meal(meal_id):
     # Fetch the meal to be updated
     meal = Meal.query.get_or_404(meal_id)
 
+    # Save old version to MealHistory
+    meal.save_meal_version()
+
     # Update meal details
     meal.name = data.get('name', meal.name)
     meal.description = data.get('description', meal.description)
@@ -98,7 +122,10 @@ def update_meal(meal_id):
     meal.category_id = data.get('category_id', meal.category_id)
     meal.version += 1
     meal.last_update = datetime.utcnow()
+    db.session.commit()
 
+    # Save new version to MealHistory
+    meal.save_meal_version()
     db.session.commit()
     return jsonify({"message": "Meal updated", "meal_id": meal.id}), 200
 

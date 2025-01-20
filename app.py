@@ -1,6 +1,6 @@
 from flask import Flask, jsonify
 from config import Config
-from models import db, User
+from models import db
 from seeds import seed_database
 from flask_migrate import Migrate
 from dotenv import load_dotenv
@@ -25,11 +25,12 @@ CORS(app)  # Dodaj tę linię, aby włączyć CORS dla całej aplikacji
 def seed_base_database():
     with app.app_context():
         seed_database()
+        pass
 
 def seed_data():
     with app.app_context():
         # Call your seed_database function or add your seeding logic here
-        seed_database()
+        # seed_database()
         print("Database seeded successfully.")
 
 @app.cli.command('seed')
@@ -44,7 +45,11 @@ def setup_database():
             print('Importing database, this may take a while')
             import_database()
             print('Importing completed')
-            seed_database()
+        if 'seed' in sys.argv:
+            print('Seeding database with base data')
+            seed_base_database()
+            print('Seeding completed')
+        if 'seed' in sys.argv or 'dbimport' in sys.argv or 'importdb' in sys.argv:
             exit()
 
 # Registration Form
@@ -72,9 +77,9 @@ app.add_url_rule('/users/<int:user_id>', view_func=deactivate_user, methods=['DE
 
 # User Details Endpoints
 from endpoints.user_details import create_user_details, update_user_details, get_user_details
-app.add_url_rule('/user_details/<int:user_id>', view_func=create_user_details, methods=['POST'])
-app.add_url_rule('/user_details/<int:user_id>', view_func=update_user_details, methods=['PUT', 'PATCH'])
-app.add_url_rule('/user_details/<int:user_id>', view_func=get_user_details, methods=['GET'])
+app.add_url_rule('/users/<int:user_id>/details', view_func=create_user_details, methods=['POST'])
+app.add_url_rule('/users/<int:user_id>/details', view_func=update_user_details, methods=['PUT', 'PATCH'])
+app.add_url_rule('/users/<int:user_id>/details', view_func=get_user_details, methods=['GET'])
 
 # Diets Endpoints
 from endpoints.diets import create_diet, get_diets, get_diet
@@ -89,9 +94,10 @@ app.add_url_rule('/users/<int:user_id>/diets/<int:diet_id>', view_func=remove_di
 app.add_url_rule('/users/<int:user_id>/diets', view_func=get_user_diets, methods=['GET'])
 
 # Meals Endpoints
-from endpoints.meals import get_meals, get_meal, create_meal, update_meal, delete_meal
+from endpoints.meals import get_meals, get_meal, create_meal, update_meal, delete_meal, search_meals
 app.add_url_rule('/meals', view_func=get_meals, methods=['GET'])
 app.add_url_rule('/meals/<int:meal_id>', view_func=get_meal, methods=['GET'])
+app.add_url_rule('/meals/search', view_func=search_meals, methods=['GET'])
 app.add_url_rule('/meals', view_func=create_meal, methods=['POST'])
 app.add_url_rule('/meals/<int:meal_id>', view_func=update_meal, methods=['PUT', 'PATCH'])
 app.add_url_rule('/meals/<int:meal_id>', view_func=delete_meal, methods=['DELETE'])
@@ -127,20 +133,31 @@ app.add_url_rule('/ingredients', view_func=get_ingredients, methods=['GET'])
 app.add_url_rule('/ingredients/<int:ing_id>', view_func=get_ingredient_by_id, methods=['GET'])
 app.add_url_rule('/ingredients/search/<query>', view_func=search_ingredients, methods=['GET'])
 
+# Food schedule Endpoints
+
+from endpoints.food_schedule import get_food_schedules, get_food_schedule, create_food_schedule, delete_food_schedule
+app.add_url_rule('/food/schedules', view_func=get_food_schedules, methods=['GET'])
+app.add_url_rule('/food/schedules', view_func=create_food_schedule, methods=['POST'])
+app.add_url_rule('/food/schedules/<int:schedule_id>', view_func=get_food_schedule, methods=['GET'])
+app.add_url_rule('/food/schedules/<int:schedule_id>', view_func=delete_food_schedule, methods=['DELETE'])
+
+from endpoints.shopping_list import generate_shopping_list
+app.add_url_rule('/users/<int:user_id>/shopping_list', view_func=generate_shopping_list, methods=['GET'])
+
 # Login & Register Endpoints
 
 from endpoints.auth import login, register
 
 app.add_url_rule('/login', view_func=login, methods=['POST'])
-app.add_url_rule('/register', view_func=register, methods=['POST'])
+# app.add_url_rule('/register', view_func=register, methods=['POST'])
 
 # Przykład zabezpieczonego endpointu
-@app.route('/protected', methods=['GET'])
-@jwt_required()
-def protected():
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
-    return jsonify({"message": f"Hello, {user.email}!"}), 200
+# @app.route('/protected', methods=['GET'])
+# @jwt_required()
+# def protected():
+#     current_user_id = get_jwt_identity()
+#     user = User.query.get(current_user_id)
+#     return jsonify({"message": f"Hello, {user.email}!"}), 200
 
 # ==================== URUCHOMIENIE APLIKACJI ====================
 if __name__ == "__main__":

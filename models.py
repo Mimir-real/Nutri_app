@@ -4,7 +4,60 @@ from sqlalchemy.dialects.postgresql import TSVECTOR
 
 db = SQLAlchemy()
 
-# MODELE OGÓLNE
+# Model do OpenFoodFacts
+
+class Ingredients(db.Model):
+    __tablename__ = 'ingredients'
+    id = db.Column(db.Integer, primary_key=True, unique=True)
+    product_name = db.Column(db.String)
+    generic_name = db.Column(db.String)
+    kcal_100g = db.Column(db.Float)
+    protein_100g = db.Column(db.Float)
+    carbs_100g = db.Column(db.Float)
+    fat_100g = db.Column(db.Float)
+    brand = db.Column(db.String)
+    barcode = db.Column(db.String)
+    image_url = db.Column(db.String)
+    labels_tags = db.Column(db.String)
+    product_quantity = db.Column(db.Float)
+    allergens = db.Column(db.String)
+    tsv = db.Column(TSVECTOR)
+
+    __table_args__ = (
+        Index('tsv_idx', 'tsv', postgresql_using='gin'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'product_name': self.product_name,
+            'generic_name': self.generic_name,
+            'kcal_100g': self.kcal_100g,
+            'protein_100g': self.protein_100g,
+            'carbs_100g': self.carbs_100g,
+            'fat_100g': self.fat_100g,
+            'brand': self.brand,
+            'barcode': self.barcode,
+            'image_url': self.image_url,
+            'labels_tags': self.labels_tags,
+            'product_quantity': self.product_quantity,
+            'allergens': self.allergens,
+        }
+
+def update_tsvector(mapper, connection, target):
+    connection.execute(
+        Ingredients.__table__.update().
+        where(Ingredients.id == target.id).
+        values(
+            tsv=func.to_tsvector('english', target.product_name + ' ' + target.generic_name)
+        )
+    )
+
+# Wyzwalacz do aktualizacji kolumn tsv przy każdej zmianie danych
+event.listen(Ingredients, 'after_insert', update_tsvector)
+event.listen(Ingredients, 'after_update', update_tsvector)
+
+# Modele ogólne
 class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
@@ -131,9 +184,23 @@ class Meal(db.Model):
             'diet_id': self.diet_id,
             'category_id': self.category_id,
             'version': self.version,
-            'last_update': self.last_update
+            'last_update': self.last_update.strftime('%Y-%m-%d %H:%M:%S') if self.last_update else None
         }
 
+    def save_meal_version(self):
+        # Check if the version already exists in MealHistory
+        existing_version = MealHistory.query.filter_by(meal_id=self.id, meal_version=self.version).first()
+        if existing_version:
+            return  # Version already exists, do not save again
+
+        meal_history = MealHistory(
+            composition=self.to_dict(),
+            meal_id=self.id,
+            meal_version=self.version
+        )
+        db.session.add(meal_history)
+        db.session.commit()
+        
 class MealCategory(db.Model):
     __tablename__ = 'meal_category'
     id = db.Column(db.Integer, primary_key=True)
@@ -166,79 +233,13 @@ class MealIngredients(db.Model):
             'quantity': self.quantity
         }
 
-class Ingredients(db.Model):
-    __tablename__ = 'ingredients'
-    id = db.Column(db.Integer, primary_key=True, unique=True)
-    product_name = db.Column(db.String)
-    generic_name = db.Column(db.String)
-    kcal_100g = db.Column(db.Float)
-    protein_100g = db.Column(db.Float)
-    carbs_100g = db.Column(db.Float)
-    fat_100g = db.Column(db.Float)
-    brand = db.Column(db.String)
-    barcode = db.Column(db.String)
-    image_url = db.Column(db.String)
-    labels_tags = db.Column(db.String)
-    product_quantity = db.Column(db.Float)
-    allergens = db.Column(db.String)
-    tsv = db.Column(TSVECTOR)  # Dodaj kolumnę tsv
-
-    __table_args__ = (
-        Index('tsv_idx', 'tsv', postgresql_using='gin'),
-    )
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'product_name': self.product_name,
-            'generic_name': self.generic_name,
-            'kcal_100g': self.kcal_100g,
-            'protein_100g': self.protein_100g,
-            'carbs_100g': self.carbs_100g,
-            'fat_100g': self.fat_100g,
-            'brand': self.brand,
-            'barcode': self.barcode,
-            'image_url': self.image_url,
-            'labels_tags': self.labels_tags,
-            'product_quantity': self.product_quantity,
-            'allergens': self.allergens,
-        }
-
-# Funkcja do aktualizacji kolumny tsv
-def update_tsvector(mapper, connection, target):
-    connection.execute(
-        Ingredients.__table__.update().
-        where(Ingredients.id == target.id).
-        values(tsv=func.to_tsvector('english', target.product_name + ' ' + target.generic_name))
-    )
-
-# Wyzwalacz do aktualizacji kolumny tsv przy każdej zmianie danych
-event.listen(Ingredients, 'after_insert', update_tsvector)
-event.listen(Ingredients, 'after_update', update_tsvector)
-
-
-# MODELE LOKALNE
-class FoodLog(db.Model):
-    __tablename__ = 'food_log'
+# Zmiana LocalMeals -> MealHistory
+class MealHistory(db.Model):
+    __tablename__ = 'meal_history'
     id = db.Column(db.Integer, primary_key=True)
-    local_meal_id = db.Column(db.Integer, db.ForeignKey('local_meals.id'))
-    portion = db.Column(db.Float)
-    at = db.Column(db.DateTime)
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'local_meal_id': self.local_meal_id,
-            'portion': self.portion,
-            'at': self.at
-        }
-
-class LocalMeals(db.Model):
-    __tablename__ = 'local_meals'
-    id = db.Column(db.Integer, primary_key=True)
-    composition = db.Column(db.Integer)
-    meal_id = db.Column(db.Integer, db.ForeignKey('meal.id'))
-    meal_version = db.Column(db.Integer)
+    composition = db.Column(db.JSON)
+    meal_id = db.Column(db.Integer, db.ForeignKey('meal.id')) # Odnosi się do ID Posiłku
+    meal_version = db.Column(db.Integer) # Odnosi się do wersji Posiłku
 
     def to_dict(self):
         return {
@@ -251,12 +252,31 @@ class LocalMeals(db.Model):
 class FoodSchedule(db.Model):
     __tablename__ = 'food_schedule'
     id = db.Column(db.Integer, primary_key=True)
-    local_meal_id = db.Column(db.Integer, db.ForeignKey('local_meals.id'))
+    meal_history_id = db.Column(db.Integer, db.ForeignKey('meal_history.id'))
     at = db.Column(db.DateTime)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # Odnosi się do ID użytkownika
 
     def to_dict(self):
         return {
             'id': self.id,
-            'local_meal_id': self.local_meal_id,
-            'at': self.at
+            'meal_history_id': self.meal_history_id,
+            'at': self.at,
+            'user_id': self.user_id
+        }
+
+class FoodLog(db.Model):
+    __tablename__ = 'food_log'
+    id = db.Column(db.Integer, primary_key=True)
+    meal_history_id = db.Column(db.Integer, db.ForeignKey('meal_history.id'))
+    portion = db.Column(db.Float)
+    at = db.Column(db.DateTime)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # Odnosi się do ID użytkownika
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'meal_history_id': self.meal_history_id,
+            'portion': self.portion,
+            'at': self.at,
+            'user_id': self.user_id
         }
