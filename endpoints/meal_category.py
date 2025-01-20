@@ -1,6 +1,10 @@
 from flask import request, jsonify
 from models import db, Meal, MealCategory
 
+def get_meal_categories():
+    categories = MealCategory.query.all()
+    return jsonify([category.to_dict() for category in categories])
+
 def assign_category_to_meal(meal_id):
     data = request.get_json()
     if not data.get('category_id'):

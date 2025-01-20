@@ -193,8 +193,15 @@ class Meal(db.Model):
         if existing_version:
             return  # Version already exists, do not save again
 
+        # Get meal ingredients
+        meal_ingredients = MealIngredients.query.filter_by(meal_id=self.id).all()
+        ingredients = [ingredient.to_dict() for ingredient in meal_ingredients]
+
         meal_history = MealHistory(
-            composition=self.to_dict(),
+            composition={
+                'meal': self.to_dict(),
+                'ingredients': ingredients
+            },
             meal_id=self.id,
             meal_version=self.version
         )

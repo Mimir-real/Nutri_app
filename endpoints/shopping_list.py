@@ -1,5 +1,5 @@
 from flask import request, jsonify
-from models import db, FoodSchedule, MealHistory, MealIngredients, Ingredients
+from models import db, FoodSchedule, MealHistory, Ingredients
 from datetime import datetime, timedelta
 
 def generate_shopping_list(user_id):
@@ -25,8 +25,8 @@ def generate_shopping_list(user_id):
         if not meal_history:
             continue
 
-        meal = meal_history.composition
-        meal_ingredients = MealIngredients.query.filter_by(meal_id=meal['id']).all()
+        meal = meal_history.composition['meal']
+        meal_ingredients = meal_history.composition['ingredients']
 
         meal_details = {
             "meal": meal,
@@ -34,14 +34,14 @@ def generate_shopping_list(user_id):
         }
 
         for meal_ingredient in meal_ingredients:
-            ingredient = Ingredients.query.get(meal_ingredient.ingredient_id)
+            ingredient = Ingredients.query.get(meal_ingredient['ingredient_id'])
             if not ingredient:
                 continue
 
             ingredient_details = {
                 "ingredient": ingredient.to_dict(),
-                "quantity": meal_ingredient.quantity,
-                "unit": meal_ingredient.unit
+                "quantity": meal_ingredient['quantity'],
+                "unit": meal_ingredient['unit']
             }
             meal_details["ingredients"].append(ingredient_details)
 
@@ -50,9 +50,9 @@ def generate_shopping_list(user_id):
                 ingredients_summary[ingredient.id] = {
                     "ingredient": ingredient.to_dict(),
                     "total_quantity": 0,
-                    "unit": meal_ingredient.unit
+                    "unit": meal_ingredient['unit']
                 }
-            ingredients_summary[ingredient.id]["total_quantity"] += meal_ingredient.quantity
+            ingredients_summary[ingredient.id]["total_quantity"] += meal_ingredient['quantity']
 
         meals.append(meal_details)
 

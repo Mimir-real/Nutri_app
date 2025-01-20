@@ -1,5 +1,5 @@
 from flask import request, jsonify
-from models import db, Meal, MealCategory, Diet, MealIngredients
+from models import db, Meal, MealCategory, Diet, MealIngredients, MealHistory
 from datetime import datetime
 from sqlalchemy import or_
 
@@ -134,3 +134,9 @@ def delete_meal(meal_id):
     db.session.delete(meal)
     db.session.commit()
     return jsonify({"message": "Meal deleted"})
+
+def get_meal_versions(meal_id):
+    meal_versions = MealHistory.query.filter_by(meal_id=meal_id).all()
+    return jsonify({
+        "meal_versions": [meal_version.to_dict() for meal_version in meal_versions]
+    })
