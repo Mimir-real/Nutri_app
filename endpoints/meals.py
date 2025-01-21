@@ -152,3 +152,28 @@ def get_meal_versions(meal_id):
     return jsonify({
         "meal_versions": [meal_version.to_dict() for meal_version in meal_versions]
     })
+
+def get_meal_nutrients(meal_id):
+    meal = Meal.query.get(meal_id)
+    if not meal:
+        return jsonify({"message": "Meal not found"}), 404
+
+    nutrients = meal.calculate_nutrients()
+    weight = meal.calculate_total_weight()
+
+    response = {
+        "nutrients": {
+            "total_calories": nutrients['calories'],
+            "total_protein": nutrients['protein'],
+            "total_carbs": nutrients['carbs'],
+            "total_fat": nutrients['fat']
+        },
+        "nutrients_per_100g": {
+            "calories": nutrients['calories'] / weight * 100,
+            "protein": nutrients['protein'] / weight * 100,
+            "carbs": nutrients['carbs'] / weight * 100,
+            "fat": nutrients['fat'] / weight * 100
+        }
+    }
+
+    return jsonify(response)
