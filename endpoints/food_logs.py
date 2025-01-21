@@ -137,7 +137,7 @@ def calculate_daily_nutrients(user_id, date):
     return jsonify(response)
 
 # Pobieranie logów posiłków dla danego użytkownika z danego dnia
-def get_food_logs_by_date(user_id, date):
+def get_food_logs_by_date_for_user(user_id, date):
     try:
         start_date = datetime.strptime(date, '%d-%m-%Y')
         end_date = start_date + timedelta(days=1)
@@ -160,6 +160,25 @@ def get_food_logs_by_date(user_id, date):
 
     except ValueError:
         return jsonify({"error": "Invalid date format. Use 'DD-MM-YYYY'"}), 400
+
+    except Exception as e:
+        return jsonify({"error": "An unexpected error occurred", "message": str(e)}), 500
+    
+def get_food_logs_for_user(user_id):
+    try:
+        food_logs = FoodLog.query.filter(
+            FoodLog.user_id == user_id
+        ).all()
+
+        result = []
+        for log in food_logs:
+            meal_history = MealHistory.query.get(log.meal_history_id)
+            if meal_history:
+                log_details = log.to_dict()
+                log_details['meal'] = meal_history.composition['meal']
+                result.append(log_details)
+
+        return jsonify(result)
 
     except Exception as e:
         return jsonify({"error": "An unexpected error occurred", "message": str(e)}), 500

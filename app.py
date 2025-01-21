@@ -115,26 +115,28 @@ app.add_url_rule('/ingredients/<int:ing_id>', view_func=get_ingredient_by_id, me
 app.add_url_rule('/ingredients/search/<query>', view_func=search_ingredients, methods=['GET'])
 
 # Food schedule Endpoints
-from endpoints.food_schedule import get_food_schedules, get_food_schedule, create_food_schedule, delete_food_schedule, get_food_schedule_by_date
+from endpoints.food_schedule import get_food_schedules, get_food_schedule, create_food_schedule, delete_food_schedule, get_food_schedule_for_user, get_food_schedule_for_user_by_date
 app.add_url_rule('/food/schedules', view_func=get_food_schedules, methods=['GET'])
 app.add_url_rule('/food/schedules', view_func=create_food_schedule, methods=['POST'])
 app.add_url_rule('/food/schedules/<int:schedule_id>', view_func=get_food_schedule, methods=['GET'])
 app.add_url_rule('/food/schedules/<int:schedule_id>', view_func=delete_food_schedule, methods=['DELETE'])
 
-app.add_url_rule('/users/<int:user_id>/food/schedule/<date>', view_func=get_food_schedule_by_date, methods=['GET'])
+app.add_url_rule('/users/<int:user_id>/food/schedule', view_func=get_food_schedule_for_user, methods=['GET'])
+app.add_url_rule('/users/<int:user_id>/food/schedule/<date>', view_func=get_food_schedule_for_user_by_date, methods=['GET'])
 
 # Shopping List Endpoints
 from endpoints.shopping_list import generate_shopping_list
 app.add_url_rule('/users/<int:user_id>/shopping_list', view_func=generate_shopping_list, methods=['GET'])
 
 # Food log Endpoints
-from endpoints.food_logs import get_food_logs, get_food_log, create_food_log, delete_food_log, calculate_daily_nutrients, get_food_logs_by_date
+from endpoints.food_logs import get_food_logs, get_food_log, create_food_log, delete_food_log, calculate_daily_nutrients, get_food_logs_for_user, get_food_logs_by_date_for_user
 app.add_url_rule('/food/logs', view_func=get_food_logs, methods=['GET'])
 app.add_url_rule('/food/logs/<int:food_log_id>', view_func=get_food_log, methods=['GET'])
 app.add_url_rule('/food/logs', view_func=create_food_log, methods=['POST'])
 app.add_url_rule('/food/logs/<int:food_log_id>', view_func=delete_food_log, methods=['DELETE'])
 
-app.add_url_rule('/users/<int:user_id>/food/log/<date>', view_func=get_food_logs_by_date, methods=['GET'])
+app.add_url_rule('/users/<int:user_id>/food/log', view_func=get_food_logs_for_user, methods=['GET'])
+app.add_url_rule('/users/<int:user_id>/food/log/<date>', view_func=get_food_logs_by_date_for_user, methods=['GET'])
 
 # Daily Nutrients Endpoints
 app.add_url_rule('/users/<int:user_id>/nutrients/<date>', view_func=calculate_daily_nutrients, methods=['GET'])

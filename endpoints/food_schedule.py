@@ -67,8 +67,28 @@ def delete_food_schedule(schedule_id):
     else:
         return jsonify({"message": "Food schedule not found"}), 404
 
+# Pobieranie zaplanowanych posiłków dla danego użytkownika
+def get_food_schedule_for_user(user_id):
+    try:
+        food_schedules = FoodSchedule.query.filter(
+            FoodSchedule.user_id == user_id
+        ).all()
+
+        result = []
+        for schedule in food_schedules:
+            meal_history = MealHistory.query.get(schedule.meal_history_id)
+            if meal_history:
+                schedule_details = schedule.to_dict()
+                schedule_details['meal'] = meal_history.composition['meal']
+                result.append(schedule_details)
+
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"error": "An unexpected error occurred", "message": str(e)}), 500
+
 # Pobieranie zaplanowanych posiłków dla danego użytkownika z danego dnia
-def get_food_schedule_by_date(user_id, date):
+def get_food_schedule_for_user_by_date(user_id, date):
     try:
         start_date = datetime.strptime(date, '%d-%m-%Y')
         end_date = start_date + timedelta(days=1)
