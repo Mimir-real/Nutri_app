@@ -1,5 +1,5 @@
 from flask import request, jsonify
-from models import db, FoodLog, MealHistory
+from models import db, FoodLog, MealHistory, UserDetails
 from datetime import datetime, timedelta
 from sqlalchemy.exc import IntegrityError
 
@@ -107,13 +107,34 @@ def calculate_daily_nutrients(user_id, date):
             total_carbs += (nutrients['carbs'] / total_weight) * log.portion
             total_fat += (nutrients['fat'] / total_weight) * log.portion
 
-    return jsonify({
+    response = {
         "date": date,
-        "total_calories": total_calories,
-        "total_protein": total_protein,
-        "total_carbs": total_carbs,
-        "total_fat": total_fat
-    })
+        "nutrients": {
+            "total_kcal": total_calories,
+            "total_protein": total_protein,
+            "total_carbs": total_carbs,
+            "total_fat": total_fat
+        }
+    }
+
+    compare_details = request.args.get('compareDetails', 'false').lower() == 'true'
+    if compare_details:
+        user_details = UserDetails.query.get(user_id)
+        if user_details:
+            response["details"] = {
+                "kcal_goal": user_details.kcal_goal,
+                "fat_goal": user_details.fat_goal,
+                "protein_goal": user_details.protein_goal,
+                "carb_goal": user_details.carb_goal
+            }
+            response["percentage"] = {
+                "kcal_percentage": (total_calories / user_details.kcal_goal) * 100 if user_details.kcal_goal else 0,
+                "fat_percentage": (total_fat / user_details.fat_goal) * 100 if user_details.fat_goal else 0,
+                "protein_percentage": (total_protein / user_details.protein_goal) * 100 if user_details.protein_goal else 0,
+                "carbs_percentage": (total_carbs / user_details.carb_goal) * 100 if user_details.carb_goal else 0
+            }
+
+    return jsonify(response)
 
 # Pobieranie logów posiłków dla danego użytkownika z danego dnia
 def get_food_logs_by_date(user_id, date):
