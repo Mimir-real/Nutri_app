@@ -1,5 +1,4 @@
 from flask import Flask, jsonify
-from config import Config
 from seeds import seed_database
 from dotenv import load_dotenv
 from db_import import import_database
@@ -13,7 +12,6 @@ load_dotenv()
 
 # Inicjalizacja aplikacji Flask
 app = Flask(__name__)
-app.config.from_object(Config)
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')  # Load from environment variable
 jwt = JWTManager(app)
 CORS(app)  # Dodaj tę linię, aby włączyć CORS dla całej aplikacji

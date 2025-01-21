@@ -70,6 +70,7 @@ Aby uruchomić projekt, wymagane są:
    DB_PASSWORD=1234
    DB_HOST=localhost
    DB_PORT=5432
+   JWT_SECRET_KEY=secret
    ```
    
 ---
