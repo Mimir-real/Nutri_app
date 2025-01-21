@@ -1,10 +1,22 @@
+from db_config import get_db_connection
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask import request, jsonify
 import uuid
 import psycopg2
 from psycopg2 import sql
 from psycopg2.extras import RealDictCursor
-from db_config import get_db_connection
+from werkzeug.security import generate_password_hash, check_password_hash
+from endpoints.auth import get_logged_user, login_required, anonymous_required
 
+@login_required
+def get_me():
+    user = get_logged_user()
+    if isinstance(user, dict) and "error" in user:
+        return jsonify(user), 403
+
+    return jsonify(user)
+
+@anonymous_required
 def create_user():
     try:
         data = request.get_json()
@@ -16,12 +28,15 @@ def create_user():
         conn = get_db_connection()
         cursor = conn.cursor()
 
+        # Hashujemy hasło
+        hashed_password = generate_password_hash(data['password'])
+
         # Tworzymy nowego użytkownika
         cursor.execute('''
             INSERT INTO "user" (email, password, email_confirmed, active, created_at)
             VALUES (%s, %s, %s, %s, NOW())
             RETURNING id
-        ''', (data['email'], data['password'], False, False))
+        ''', (data['email'], hashed_password, False, False))
         new_user_id = cursor.fetchone()[0]
 
         # Generate a unique activation code
@@ -52,6 +67,7 @@ def create_user():
         print('POST /users - Exception:', e)
         return jsonify({"error": "An error occurred while creating the user", "message": str(e)}), 500
 
+@login_required
 def get_users():
     limit = request.args.get('limit', default=10, type=int)
     page = request.args.get('page', default=1, type=int)
@@ -85,6 +101,7 @@ def get_users():
         "page_size": limit
     })
 
+@login_required
 def get_user(user_id):
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -98,6 +115,7 @@ def get_user(user_id):
     else:
         return jsonify({"message": "User not found"}), 404
 
+@anonymous_required
 def activate_user(user_id):
     code = request.args.get('code')
     email = request.args.get('email')
@@ -136,7 +154,12 @@ def activate_user(user_id):
 
     return jsonify({"message": "User activated successfully"}), 200
 
+@login_required
 def deactivate_user(user_id):
+    current_user_id = get_jwt_identity()
+    if current_user_id != str(user_id):
+        return jsonify({"error": "Unauthorized"}), 403
+
     data = request.get_json()
     password = data.get('password')
 
@@ -153,7 +176,7 @@ def deactivate_user(user_id):
         conn.close()
         return jsonify({"message": "User not found"}), 404
 
-    if user['password'] != password:
+    if not check_password_hash(user['password'], password):
         cursor.close()
         conn.close()
         return jsonify({"error": "Incorrect password"}), 401

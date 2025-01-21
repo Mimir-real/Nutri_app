@@ -1,9 +1,10 @@
 from flask import request, jsonify
 from werkzeug.security import check_password_hash, generate_password_hash
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, verify_jwt_in_request
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from db_config import get_db_connection
+from functools import wraps
 
 def login():
     data = request.get_json()
@@ -22,8 +23,43 @@ def login():
     cursor.close()
     conn.close()
 
-    if user and user['password'] == password:
-        access_token = "test_token"  # create_access_token(identity=user['id'])
+    if user and check_password_hash(user['password'], password):
+        access_token = create_access_token(identity=str(user['id']))
         return jsonify({"message": "Login successful", "access_token": access_token}), 200
     else:
         return jsonify({"error": "Invalid email or password"}), 401
+
+@jwt_required()
+def get_logged_user():
+    current_user_id = get_jwt_identity()
+    if not current_user_id:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    cursor.execute('SELECT id, email, email_confirmed, active, created_at FROM "user" WHERE id = %s', (current_user_id,))
+    user = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    return user
+
+def login_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        try:
+            verify_jwt_in_request()
+            return fn(*args, **kwargs)
+        except Exception:
+            return jsonify({"error": "Unauthorized"}), 401
+    return wrapper
+
+def anonymous_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        try:
+            verify_jwt_in_request()
+            return jsonify({"error": "Already logged in"}), 400
+        except Exception:
+            return fn(*args, **kwargs)
+    return wrapper

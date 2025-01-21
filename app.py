@@ -41,9 +41,10 @@ def setup_database():
             exit()
 
 # User Endpoints
-from endpoints.users import create_user, get_users, get_user, activate_user, deactivate_user
+from endpoints.users import create_user, get_users, get_user, activate_user, deactivate_user, get_me
 app.add_url_rule('/users', view_func=create_user, methods=['POST'])
 app.add_url_rule('/users', view_func=get_users, methods=['GET'])
+app.add_url_rule('/users/me', view_func=get_me, methods=['GET'])
 app.add_url_rule('/users/<int:user_id>', view_func=get_user, methods=['GET'])
 app.add_url_rule('/users/<int:user_id>/activate', view_func=activate_user, methods=['GET'])
 app.add_url_rule('/users/<int:user_id>', view_func=deactivate_user, methods=['DELETE'])

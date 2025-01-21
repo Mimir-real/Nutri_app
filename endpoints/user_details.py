@@ -1,9 +1,15 @@
 from flask import request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from db_config import get_db_connection
 
+@jwt_required()
 def create_user_details(user_id):
+    current_user_id = get_jwt_identity()
+    if current_user_id != user_id:
+        return jsonify({"error": "Unauthorized"}), 403
+
     data = request.get_json()
 
     if not user_id:
@@ -50,7 +56,12 @@ def create_user_details(user_id):
     conn.close()
     return jsonify({"message": "User details created successfully"}), 201
 
+@jwt_required()
 def update_user_details(user_id):
+    current_user_id = get_jwt_identity()
+    if current_user_id != user_id:
+        return jsonify({"error": "Unauthorized"}), 403
+
     data = request.get_json()
 
     if not user_id:
@@ -98,7 +109,12 @@ def update_user_details(user_id):
     conn.close()
     return jsonify({"message": "User details updated successfully"}), 200
 
+@jwt_required()
 def get_user_details(user_id):
+    current_user_id = get_jwt_identity()
+    if current_user_id != user_id:
+        return jsonify({"error": "Unauthorized"}), 403
+
     if not user_id:
         return jsonify({"error": "user_id is required"}), 400
 
