@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from models import db, FoodSchedule, MealHistory
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Pobieranie wszystkich harmonogramów posiłków
 def get_food_schedules():
@@ -61,16 +61,30 @@ def delete_food_schedule(schedule_id):
     db.session.commit()
     return jsonify({"message": "Food schedule deleted"})
 
-# # ==================== FOOD SCHEDULE CRUD ====================
-# @app.route('/food_schedules', methods=['POST'])
-# def create_food_schedule():
-#     data = request.get_json()
-#     new_schedule = FoodSchedule(local_meal_id=data['local_meal_id'], at=data['at'])
-#     db.session.add(new_schedule)
-#     db.session.commit()
-#     return jsonify({"message": "Food schedule created", "schedule_id": new_schedule.id}), 201
+# Pobieranie zaplanowanych posiłków dla danego użytkownika z danego dnia
+def get_food_schedule_by_date(user_id, date):
+    try:
+        start_date = datetime.strptime(date, '%d-%m-%Y')
+        end_date = start_date + timedelta(days=1)
 
-# @app.route('/food_schedules', methods=['GET'])
-# def get_food_schedules():
-#     schedules = FoodSchedule.query.all()
-#     return jsonify([s.to_dict() for s in schedules])
+        food_schedules = FoodSchedule.query.filter(
+            FoodSchedule.user_id == user_id,
+            FoodSchedule.at >= start_date,
+            FoodSchedule.at < end_date
+        ).all()
+
+        result = []
+        for schedule in food_schedules:
+            meal_history = MealHistory.query.get(schedule.meal_history_id)
+            if meal_history:
+                schedule_details = schedule.to_dict()
+                schedule_details['meal'] = meal_history.composition['meal']
+                result.append(schedule_details)
+
+        return jsonify(result)
+
+    except ValueError:
+        return jsonify({"error": "Invalid date format. Use 'DD-MM-YYYY'"}), 400
+
+    except Exception as e:
+        return jsonify({"error": "An unexpected error occurred", "message": str(e)}), 500

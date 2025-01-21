@@ -207,6 +207,35 @@ class Meal(db.Model):
         )
         db.session.add(meal_history)
         db.session.commit()
+    
+    def calculate_nutrients(self):
+        meal_ingredients = MealIngredients.query.filter_by(meal_id=self.id).all()
+        total_calories = 0
+        total_protein = 0
+        total_carbs = 0
+        total_fat = 0
+        for ingredient in meal_ingredients:
+            ingredient_details = Ingredients.query.get(ingredient.ingredient_id)
+            if ingredient_details:
+                if ingredient_details.kcal_100g:
+                    total_calories += (ingredient.quantity * ingredient_details.kcal_100g) / 100
+                if ingredient_details.protein_100g:
+                    total_protein += (ingredient.quantity * ingredient_details.protein_100g) / 100
+                if ingredient_details.carbs_100g:
+                    total_carbs += (ingredient.quantity * ingredient_details.carbs_100g) / 100
+                if ingredient_details.fat_100g:
+                    total_fat += (ingredient.quantity * ingredient_details.fat_100g) / 100
+        return {
+            'calories': total_calories,
+            'protein': total_protein,
+            'carbs': total_carbs,
+            'fat': total_fat
+        }
+    
+    def calculate_total_weight(self):
+        meal_ingredients = MealIngredients.query.filter_by(meal_id=self.id).all()
+        total_weight = sum(ingredient.quantity for ingredient in meal_ingredients)
+        return total_weight
         
 class MealCategory(db.Model):
     __tablename__ = 'meal_category'
@@ -255,6 +284,35 @@ class MealHistory(db.Model):
             'meal_id': self.meal_id,
             'meal_version': self.meal_version
         }
+
+    def calculate_nutrients(self):
+        ingredients = self.composition.get('ingredients', [])
+        total_calories = 0
+        total_protein = 0
+        total_carbs = 0
+        total_fat = 0
+        for ingredient in ingredients:
+            ingredient_details = Ingredients.query.get(ingredient['ingredient_id'])
+            if ingredient_details:
+                if ingredient_details.kcal_100g:
+                    total_calories += (ingredient['quantity'] * ingredient_details.kcal_100g) / 100
+                if ingredient_details.protein_100g:
+                    total_protein += (ingredient['quantity'] * ingredient_details.protein_100g) / 100
+                if ingredient_details.carbs_100g:
+                    total_carbs += (ingredient['quantity'] * ingredient_details.carbs_100g) / 100
+                if ingredient_details.fat_100g:
+                    total_fat += (ingredient['quantity'] * ingredient_details.fat_100g) / 100
+        return {
+            'calories': total_calories,
+            'protein': total_protein,
+            'carbs': total_carbs,
+            'fat': total_fat
+        }
+
+    def calculate_total_weight(self):
+        ingredients = self.composition.get('ingredients', [])
+        total_weight = sum(ingredient['quantity'] for ingredient in ingredients)
+        return total_weight
 
 class FoodSchedule(db.Model):
     __tablename__ = 'food_schedule'
