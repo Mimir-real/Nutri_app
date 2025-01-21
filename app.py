@@ -9,7 +9,7 @@ import os
 import sys
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
 from flask_cors import CORS
-from flask_migrate import Migrate
+from endpoints.auth import auth_bp
 
 load_dotenv()
 
@@ -17,10 +17,13 @@ load_dotenv()
 app = Flask(__name__)
 app.config.from_object(Config)
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')  # Load from environment variable
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'secretsecret')  # Fallback secret key
 db.init_app(app)
 migrate = Migrate(app, db)
 jwt = JWTManager(app)
-CORS(app)  # Dodaj tę linię, aby włączyć CORS dla całej aplikacji
+CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins
+
+app.register_blueprint(auth_bp)
 
 @app.cli.command('seed')
 def seed():
@@ -29,7 +32,6 @@ def seed():
 def seed_base_database():
     with app.app_context():
         seed_database()
-        pass
 
 # Funkcja do inicjalizacji bazy danych
 def setup_database():
@@ -146,7 +148,7 @@ app.add_url_rule('/users/<int:user_id>/nutrients/<date>', view_func=calculate_da
 from endpoints.auth import login, register
 
 app.add_url_rule('/login', view_func=login, methods=['POST'])
-# app.add_url_rule('/register', view_func=register, methods=['POST'])
+app.add_url_rule('/register', view_func=register, methods=['POST'])
 
 # Przykład zabezpieczonego endpointu
 # @app.route('/protected', methods=['GET'])
