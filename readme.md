@@ -65,40 +65,13 @@ Aby uruchomić projekt, wymagane są:
 6. **Utwórz plik `.env` i skonfiguruj połączenie:**
    
    ```plaintext
-   DATABASE_URL=postgresql://postgres:postgres@adresIP:PORT/NazwaBazy
-   SECRET_KEY=your-secret-key
+   DB_NAME=bazaDanych
+   DB_USER=postgres
+   DB_PASSWORD=1234
+   DB_HOST=localhost
+   DB_PORT=5432
    ```
    
----
-
-## Konfiguracja
-
-1. **Załaduj zmienne środowiskowe w aplikacji:**
-
-   W pliku `app.py` dodaj:
-   
-   ```python
-   from dotenv import load_dotenv
-   import os
-   
-   load_dotenv()
-   ```
-
-2. **Skonfiguruj połączenie z bazą danych w `config.py`:**
-   
-   ```python
-   class Config:
-       SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
-       SQLALCHEMY_TRACK_MODIFICATIONS = False
-       SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key')
-   ```
-
-3. **Zainstaluj bibliotekę `python-dotenv`:**
-   
-   ```bash
-   pip install python-dotenv
-   ```
-
 ---
 
 ## Uruchomienie
@@ -133,10 +106,8 @@ Aby uruchomić projekt, wymagane są:
 diet-app/
 │
 ├── app.py                # Główny plik aplikacji Flask
-├── config.py             # Konfiguracja aplikacji
-├── models.py             # Modele SQLAlchemy
+├── db_config.py          # Konfiguracja bazy danych
 ├── seeds.py              # Inicjalizacja danych w bazie
-├── migrations/           # Folder z migracjami bazy danych
 ├── .env                  # Plik konfiguracyjny
 ├── requirements.txt      # Plik z zależnościami
 └── README.md             # Dokumentacja projektu
@@ -160,9 +131,6 @@ setup_database()
 ## Wykorzystane technologie
 
 - **Flask** - framework webowy do budowy aplikacji w Pythonie
-- **Flask-SQLAlchemy** - ORM dla bazy danych
-- **Flask-WTF** - obsługa formularzy
-- **Flask-Migrate** - migracje bazy danych
 - **PostgreSQL** - baza danych
 - **python-dotenv** - obsługa zmiennych środowiskowych
 
