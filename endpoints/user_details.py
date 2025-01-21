@@ -1,11 +1,15 @@
 from flask import request, jsonify
-from models import db, UserDetails
+from models import db, UserDetails, User
 
 def create_user_details(user_id):
     data = request.get_json()
 
     if not user_id:
         return jsonify({"error": "user_id is required"}), 400
+    
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
 
     details = UserDetails.query.get(user_id)
     if details:
@@ -47,6 +51,10 @@ def update_user_details(user_id):
 
     if not user_id:
         return jsonify({"error": "user_id is required"}), 400
+    
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
 
     details = UserDetails.query.get(user_id)
     if not details:
@@ -81,6 +89,13 @@ def update_user_details(user_id):
     return jsonify({"message": "User details updated successfully"}), 200
 
 def get_user_details(user_id):
+    if not user_id:
+        return jsonify({"error": "user_id is required"}), 400
+    
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
     details = UserDetails.query.get(user_id)
     if details:
         return jsonify(details.to_dict())
