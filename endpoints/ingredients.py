@@ -26,9 +26,10 @@ def get_ingredient_by_id(ing_id):
 def search_ingredients(query):
     top = request.args.get('top', default=10, type=int)
     
-    # Use full-text search for better matching
+    # Use full-text search for better matching and filter out ingredients with null product_quantity
     results = Ingredients.query.filter(
-        func.to_tsvector('english', Ingredients.product_name + ' ' + Ingredients.generic_name).match(query)
+        func.to_tsvector('english', Ingredients.product_name + ' ' + Ingredients.generic_name).match(query),
+        Ingredients.product_quantity.isnot(None)
     ).limit(top).all()
     
     # Return all fields in the row
