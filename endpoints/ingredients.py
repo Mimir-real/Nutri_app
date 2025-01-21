@@ -20,8 +20,11 @@ def get_ingredients():
     })
 
 def get_ingredient_by_id(ing_id):
-    ingredient = Ingredients.query.get_or_404(ing_id)
-    return jsonify(ingredient.to_dict())
+    ingredient = Ingredients.query.get(ing_id)
+    if ingredient:
+        return jsonify(ingredient.to_dict())
+    else:
+        return jsonify({"message": "Ingredient not found"}), 404
 
 def search_ingredients(query):
     top = request.args.get('top', default=10, type=int)

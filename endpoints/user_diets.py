@@ -6,9 +6,14 @@ def assign_diet_to_user(user_id):
     data = request.get_json()
     if not user_id or not data.get('diet_id'):
         return jsonify({"error": "diet_id is required"}), 400
+    
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
 
-    user = User.query.get_or_404(user_id)
-    diet = Diet.query.get_or_404(data['diet_id'])
+    diet = Diet.query.get(data['diet_id'])
+    if not diet:
+        return jsonify({"message": "Diet not found"}), 404
 
     allowed = data.get('allowed', True)  # Default to True if 'allowed' is not provided
 

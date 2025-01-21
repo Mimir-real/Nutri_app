@@ -26,5 +26,8 @@ def get_diets():
     })
 
 def get_diet(diet_id):
-    diet = Diet.query.get_or_404(diet_id)
-    return jsonify(diet.to_dict())
+    diet = Diet.query.get(diet_id)
+    if diet:
+        return jsonify(diet.to_dict())
+    else:
+        return jsonify({"message": "Diet not specified"}), 404

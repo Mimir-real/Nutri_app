@@ -73,8 +73,11 @@ def get_users():
     })
 
 def get_user(user_id):
-    user = User.query.get_or_404(user_id)
-    return jsonify(user.to_dict())
+    user = User.query.get(user_id)
+    if user:
+        return jsonify(user.to_dict())
+    else:
+        return jsonify({"message": "User not found"}), 404
 
 def activate_user(user_id):
     code = request.args.get('code')
@@ -107,8 +110,10 @@ def deactivate_user(user_id):
 
     if not password:
         return jsonify({"error": "Password is required"}), 400
-
-    user = User.query.get_or_404(user_id)
+    
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
 
     if user.password != password:
         return jsonify({"error": "Incorrect password"}), 401

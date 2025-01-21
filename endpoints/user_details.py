@@ -48,7 +48,9 @@ def update_user_details(user_id):
     if not user_id:
         return jsonify({"error": "user_id is required"}), 400
 
-    details = UserDetails.query.get_or_404(user_id)
+    details = UserDetails.query.get(user_id)
+    if not details:
+        return jsonify({"message": "User details not found"}), 404
 
     gender = data.get('gender', details.gender)
     if gender not in ['F', 'M', 'X']:
@@ -79,5 +81,8 @@ def update_user_details(user_id):
     return jsonify({"message": "User details updated successfully"}), 200
 
 def get_user_details(user_id):
-    details = UserDetails.query.get_or_404(user_id)
-    return jsonify(details.to_dict())
+    details = UserDetails.query.get(user_id)
+    if details:
+        return jsonify(details.to_dict())
+    else:
+        return jsonify({"message": "User details not specified"}), 404

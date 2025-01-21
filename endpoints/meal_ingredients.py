@@ -25,10 +25,10 @@ def replace_meal_ingredients(meal_id):
         return jsonify({"error": "Ingredients list is required"}), 400
     ingredients = data['ingredients']
 
-    # Fetch the meal to be updated
-    meal = Meal.query.get_or_404(meal_id)
+    meal = Meal.query.get(meal_id)
+    if not meal:
+        return jsonify({"message": "Meal not found"}), 404
 
-    # Save current version to MealHistory
     meal.save_meal_version()
 
     # Usuń istniejące składniki posiłku
@@ -46,10 +46,7 @@ def replace_meal_ingredients(meal_id):
 
     # Zaktualizuj wersję posiłku
     meal.version += 1
-
-    # Save new version to MealHistory
     meal.save_meal_version()
-
     db.session.commit()
     return jsonify({"message": "Meal ingredients updated successfully"}), 200
 
@@ -60,10 +57,9 @@ def add_meal_ingredient(meal_id):
     if not data.get('ingredient_id') or not data.get('unit') or not data.get('quantity'):
         return jsonify({"error": "ingredient_id, unit, and quantity are required"}), 400
 
-    # Fetch the meal to be updated
-    meal = Meal.query.get_or_404(meal_id)
-
-    # Save current version to MealHistory
+    meal = Meal.query.get(meal_id)
+    if not meal:
+        return jsonify({"message": "Meal not found"}), 404
     meal.save_meal_version()
 
     ingredient = MealIngredients(
@@ -77,8 +73,6 @@ def add_meal_ingredient(meal_id):
     try:
         meal.version += 1
         db.session.commit()
-
-        # Save new version to MealHistory
         meal.save_meal_version()
     except IntegrityError:
         db.session.rollback()
@@ -92,21 +86,17 @@ def remove_meal_ingredient(meal_id, ingredient_id):
     if not ingredient:
         return jsonify({"error": "Ingredient not found in meal"}), 404
 
-    # Fetch the meal to be updated
-    meal = Meal.query.get_or_404(meal_id)
-
-    # Save current version to MealHistory
+    meal = Meal.query.get(meal_id)
+    if not meal:
+        return jsonify({"message": "Meal not found"}), 404
     meal.save_meal_version()
 
     db.session.delete(ingredient)
 
     try:
-        # Zaktualizuj wersję posiłku
         meal.version += 1
-        db.session.commit()
-
-        # Save new version to MealHistory
         meal.save_meal_version()
+        db.session.commit()
     except IntegrityError:
         db.session.rollback()
         return jsonify({"error": "Failed to remove ingredient"}), 400

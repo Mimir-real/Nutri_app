@@ -24,8 +24,11 @@ def get_food_logs():
 
 # Pobieranie logu posiłku według ID
 def get_food_log(food_log_id):
-    food_log = FoodLog.query.get_or_404(food_log_id)
-    return jsonify(food_log.to_dict())
+    food_log = FoodLog.query.get(food_log_id)
+    if food_log:
+        return jsonify(food_log.to_dict())
+    else:
+        return jsonify({"message": "Food log not found"}), 404
 
 # Tworzenie nowego logu posiłku
 def create_food_log():
@@ -71,10 +74,13 @@ def create_food_log():
 
 # Usuwanie logu posiłku
 def delete_food_log(food_log_id):
-    food_log = FoodLog.query.get_or_404(food_log_id)
-    db.session.delete(food_log)
-    db.session.commit()
-    return jsonify({"message": "Food log deleted"})
+    food_log = FoodLog.query.get(food_log_id)
+    if food_log:
+        db.session.delete(food_log)
+        db.session.commit()
+        return jsonify({"message": "Food log deleted"})
+    else:
+        return jsonify({"message": "Food log not found"}), 404
 
 # Przeliczanie dziennego spożycia kalorii i makroskładników
 def calculate_daily_nutrients(user_id, date):

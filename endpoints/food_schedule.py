@@ -23,8 +23,11 @@ def get_food_schedules():
 
 # Pobieranie harmonogramu posiłków według ID
 def get_food_schedule(schedule_id):
-    food_schedule = FoodSchedule.query.get_or_404(schedule_id)
-    return jsonify(food_schedule.to_dict())
+    food_schedule = FoodSchedule.query.get(schedule_id)
+    if food_schedule:
+        return jsonify(food_schedule.to_dict())
+    else:
+        return jsonify({"message": "Food schedule not found"}), 404
 
 def create_food_schedule():
     data = request.get_json()
@@ -56,10 +59,13 @@ def create_food_schedule():
 
 # Usuwanie harmonogramu posiłków
 def delete_food_schedule(schedule_id):
-    food_schedule = FoodSchedule.query.get_or_404(schedule_id)
-    db.session.delete(food_schedule)
-    db.session.commit()
-    return jsonify({"message": "Food schedule deleted"})
+    food_schedule = FoodSchedule.query.get(schedule_id)
+    if food_schedule:
+        db.session.delete(food_schedule)
+        db.session.commit()
+        return jsonify({"message": "Food schedule deleted"})
+    else:
+        return jsonify({"message": "Food schedule not found"}), 404
 
 # Pobieranie zaplanowanych posiłków dla danego użytkownika z danego dnia
 def get_food_schedule_by_date(user_id, date):
