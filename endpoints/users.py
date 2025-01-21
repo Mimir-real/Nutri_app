@@ -1,7 +1,9 @@
 from flask import request, jsonify
-from models import db, User, Links
 import uuid
-from sqlalchemy.exc import IntegrityError
+import psycopg2
+from psycopg2 import sql
+from psycopg2.extras import RealDictCursor
+from db_config import get_db_connection
 
 def create_user():
     try:
@@ -11,47 +13,42 @@ def create_user():
         if not data.get('email') or not data.get('password'):
             raise ValueError("Email and password are required")
 
-        # Tworzymy nowego użytkownika
-        new_user = User(
-            email=data['email'], 
-            password=data['password'], 
-            email_confirmed=False,
-            active=False,
-            created_at=db.func.now()
-        )
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-        db.session.add(new_user)
-        db.session.commit()
+        # Tworzymy nowego użytkownika
+        cursor.execute('''
+            INSERT INTO "user" (email, password, email_confirmed, active, created_at)
+            VALUES (%s, %s, %s, %s, NOW())
+            RETURNING id
+        ''', (data['email'], data['password'], False, False))
+        new_user_id = cursor.fetchone()[0]
 
         # Generate a unique activation code
         activation_code = str(uuid.uuid4())
 
         # Save the activation code in the Links table
-        activation_link = Links(
-            user_id=new_user.id,
-            code=activation_code,
-            type_id=1,  # 1 = activation link (in the LinkTypes table, type = "Invite")
-            used=False
-        )
+        cursor.execute('''
+            INSERT INTO links (user_id, code, type_id, used)
+            VALUES (%s, %s, %s, %s)
+        ''', (new_user_id, activation_code, 1, False))
 
-        db.session.add(activation_link)
-        db.session.commit()
+        conn.commit()
+        cursor.close()
+        conn.close()
 
-        return jsonify({"message": "User created", "user_id": new_user.id, "activation_code (wyświetlane dla celów prezentacyjnych)": activation_code}), 201
+        return jsonify({"message": "User created", "user_id": new_user_id, "activation_code (wyświetlane dla celów prezentacyjnych)": activation_code}), 201
 
     except ValueError as e:
-        # W przypadku, gdy 'email' lub 'password' są puste, zwróć błąd 400 (Bad Request)
         print('POST /users - ValueError:', e)
         return jsonify({"error": str(e)}), 400
     
-    except IntegrityError as e:
-        # W przypadku naruszenia unikalności, zwróć błąd 400 (Bad Request)
+    except psycopg2.IntegrityError as e:
         print('POST /users - IntegrityError:', e)
-        db.session.rollback()
+        conn.rollback()
         return jsonify({"error": "User with this email already exists"}), 400
     
     except Exception as e:
-        # W przypadku innych błędów, zwróć błąd 500 (Internal Server Error)
         print('POST /users - Exception:', e)
         return jsonify({"error": "An error occurred while creating the user", "message": str(e)}), 500
 
@@ -62,20 +59,42 @@ def get_users():
     if limit < 1 or page < 1:
         return jsonify({"error": "Limit and page must be positive integers"}), 400
 
-    users_pagination = User.query.paginate(page=page, per_page=limit, max_per_page=100, error_out=False)
-    users = users_pagination.items
+    offset = (page - 1) * limit
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    cursor.execute('SELECT COUNT(*) FROM "user"')
+    total = cursor.fetchone()['count']
+
+    cursor.execute('''
+        SELECT id, email, email_confirmed, active, created_at
+        FROM "user"
+        ORDER BY id
+        LIMIT %s OFFSET %s
+    ''', (limit, offset))
+    users = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
     return jsonify({
-        "users": [user.to_dict() for user in users],
-        "total": users_pagination.total,
-        "pages": users_pagination.pages,
-        "current_page": users_pagination.page,
-        "page_size": users_pagination.per_page
+        "users": users,
+        "total": total,
+        "pages": (total // limit) + (1 if total % limit > 0 else 0),
+        "current_page": page,
+        "page_size": limit
     })
 
 def get_user(user_id):
-    user = User.query.get(user_id)
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    cursor.execute('SELECT id, email, email_confirmed, active, created_at FROM "user" WHERE id = %s', (user_id,))
+    user = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
     if user:
-        return jsonify(user.to_dict())
+        return jsonify(user)
     else:
         return jsonify({"message": "User not found"}), 404
 
@@ -86,21 +105,34 @@ def activate_user(user_id):
     if not code or not email:
         return jsonify({"error": "Code and email are required"}), 400
 
-    user = User.query.get(user_id)
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    cursor.execute('SELECT id, email FROM "user" WHERE id = %s', (user_id,))
+    user = cursor.fetchone()
+
     if not user:
+        cursor.close()
+        conn.close()
         return jsonify({"error": "User not found"}), 404
 
-    if user.email != email:
+    if user['email'] != email:
+        cursor.close()
+        conn.close()
         return jsonify({"error": "Email does not match"}), 400
 
-    link = Links.query.filter_by(user_id=user_id, code=code).first()
+    cursor.execute('SELECT id FROM links WHERE user_id = %s AND code = %s', (user_id, code))
+    link = cursor.fetchone()
+
     if not link:
+        cursor.close()
+        conn.close()
         return jsonify({"error": "Invalid code"}), 400
 
-    user.active = True
-    user.email_confirmed = True
-    db.session.delete(link)
-    db.session.commit()
+    cursor.execute('UPDATE "user" SET active = %s, email_confirmed = %s WHERE id = %s', (True, True, user_id))
+    cursor.execute('DELETE FROM links WHERE id = %s', (link['id'],))
+    conn.commit()
+    cursor.close()
+    conn.close()
 
     return jsonify({"message": "User activated successfully"}), 200
 
@@ -111,13 +143,24 @@ def deactivate_user(user_id):
     if not password:
         return jsonify({"error": "Password is required"}), 400
     
-    user = User.query.get(user_id)
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    cursor.execute('SELECT id, password FROM "user" WHERE id = %s', (user_id,))
+    user = cursor.fetchone()
+
     if not user:
+        cursor.close()
+        conn.close()
         return jsonify({"message": "User not found"}), 404
 
-    if user.password != password:
+    if user['password'] != password:
+        cursor.close()
+        conn.close()
         return jsonify({"error": "Incorrect password"}), 401
 
-    user.active = False
-    db.session.commit()
+    cursor.execute('UPDATE "user" SET active = %s WHERE id = %s', (False, user_id))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
     return jsonify({"message": "User deactivated"})

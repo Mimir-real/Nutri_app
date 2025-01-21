@@ -1,7 +1,6 @@
 from flask import request, jsonify
-from models import db, Meal, MealCategory, Diet, MealIngredients, MealHistory, UserDiets
 from datetime import datetime
-from sqlalchemy import or_
+from db_config import get_db_connection
 
 def get_meals():
     limit = request.args.get('limit', default=10, type=int)
@@ -10,20 +9,49 @@ def get_meals():
     if limit < 1 or page < 1:
         return jsonify({"error": "Limit and page must be positive integers"}), 400
 
-    meals_pagination = Meal.query.paginate(page=page, per_page=limit, max_per_page=100, error_out=False)
-    meals = meals_pagination.items
+    offset = (page - 1) * limit
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT COUNT(*) FROM meal')
+    total = cursor.fetchone()[0]
+
+    cursor.execute('''
+        SELECT id, name, description, creator_id, diet_id, category_id, version, last_update
+        FROM meal
+        ORDER BY id
+        LIMIT %s OFFSET %s
+    ''', (limit, offset))
+    meals = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
     return jsonify({
-        "meals": [meal.to_dict() for meal in meals],
-        "total": meals_pagination.total,
-        "pages": meals_pagination.pages,
-        "current_page": meals_pagination.page,
-        "page_size": meals_pagination.per_page
+        "meals": [dict(meal) for meal in meals],
+        "total": total,
+        "pages": (total // limit) + (1 if total % limit > 0 else 0),
+        "current_page": page,
+        "page_size": limit
     })
 
 def get_meal(meal_id):
-    meal = Meal.query.get(meal_id)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT id, name, description, creator_id, diet_id, category_id, version, last_update
+        FROM meal
+        WHERE id = %s
+    ''', (meal_id,))
+    meal = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
     if meal:
-        return jsonify(meal.to_dict())
+        return jsonify(dict(meal))
     else:
         return jsonify({"message": "Meal not found"}), 404
 
@@ -37,142 +65,216 @@ def search_meals():
     if limit < 1 or page < 1:
         return jsonify({"error": "Limit and page must be positive integers"}), 400
 
-    # Podstawowe filtrowanie na podstawie nazwy i opisu posiłku
-    filters = [or_(Meal.name.ilike(f'%{query}%'), Meal.description.ilike(f'%{query}%'))]
+    offset = (page - 1) * limit
 
-    # Jeśli podano user_id, dodaj filtrowanie na podstawie dozwolonych i zabronionych diet
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    filters = ['(name ILIKE %s OR description ILIKE %s)']
+    params = [f'%{query}%', f'%{query}%']
+
     if user_id:
-        allowed_diets = db.session.query(UserDiets.diet_id).filter_by(user_id=user_id, allowed=True).subquery()
-        forbidden_diets = db.session.query(UserDiets.diet_id).filter_by(user_id=user_id, allowed=False).subquery()
-
         if allow_more:
-            filters.append(~Meal.diet_id.in_(forbidden_diets))
+            filters.append('diet_id NOT IN (SELECT diet_id FROM user_diets WHERE user_id = %s AND allowed = FALSE)')
+            params.append(user_id)
         else:
-            filters.append(Meal.diet_id.in_(allowed_diets))
-            filters.append(~Meal.diet_id.in_(forbidden_diets))
+            filters.append('diet_id IN (SELECT diet_id FROM user_diets WHERE user_id = %s AND allowed = TRUE)')
+            filters.append('diet_id NOT IN (SELECT diet_id FROM user_diets WHERE user_id = %s AND allowed = FALSE)')
+            params.extend([user_id, user_id])
 
-    meals_pagination = Meal.query.filter(*filters).paginate(page=page, per_page=limit, max_per_page=100, error_out=False)
+    filters = ' AND '.join(filters)
 
-    meals = meals_pagination.items
+    cursor.execute(f'SELECT COUNT(*) FROM meal WHERE {filters}', params)
+    total = cursor.fetchone()[0]
+
+    cursor.execute(f'''
+        SELECT id, name, description, creator_id, diet_id, category_id, version, last_update
+        FROM meal
+        WHERE {filters}
+        ORDER BY id
+        LIMIT %s OFFSET %s
+    ''', params + [limit, offset])
+    meals = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
     return jsonify({
-        "meals": [meal.to_dict() for meal in meals],
-        "total": meals_pagination.total,
-        "pages": meals_pagination.pages,
-        "current_page": meals_pagination.page,
-        "page_size": meals_pagination.per_page
+        "meals": [dict(meal) for meal in meals],
+        "total": total,
+        "pages": (total // limit) + (1 if total % limit > 0 else 0),
+        "current_page": page,
+        "page_size": limit
     })
 
-# Tworzenie, aktualizacja i usuwanie posiłków
 def create_meal():
     data = request.get_json()
 
     if not data.get('name') or not data.get('creator_id'):
         return jsonify({"error": "Name and creator_id are required"}), 400
-    
-    # Zakładamy że w sesji jest zapisane user_id (creator_id)
-    # My bierzemy je z body dla celów prezentacyjnych
-    creator_id = data.get('creator_id')
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
     category_id = data.get('category_id')
     if category_id:
-        category = MealCategory.query.get(category_id)
+        cursor.execute('SELECT id FROM meal_category WHERE id = %s', (category_id,))
+        category = cursor.fetchone()
         if not category:
+            cursor.close()
+            conn.close()
             return jsonify({"error": "Category not found"}), 404
 
     diet_id = data.get('diet_id')
     if diet_id:
-        diet = Diet.query.get(diet_id)
+        cursor.execute('SELECT id FROM diet WHERE id = %s', (diet_id,))
+        diet = cursor.fetchone()
         if not diet:
+            cursor.close()
+            conn.close()
             return jsonify({"error": "Diet not found"}), 404
 
-    # Create new meal
-    new_meal = Meal(
-        name=data.get('name'),
-        description=data.get('description', ""),
-        creator_id=creator_id,
-        diet_id=diet_id,
-        category_id=category_id,
-        version=1,
-        last_update=datetime.utcnow()
-    )
-    db.session.add(new_meal)
-    db.session.commit()
+    cursor.execute('''
+        INSERT INTO meal (name, description, creator_id, diet_id, category_id, version, last_update)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
+    ''', (data.get('name'), data.get('description', ""), data.get('creator_id'), diet_id, category_id, 1, datetime.utcnow()))
+    new_meal_id = cursor.fetchone()[0]
 
     ingredients = data.get('ingredients', [])
     for ingredient in ingredients:
-        meal_ingredient = MealIngredients(
-            meal_id=new_meal.id,
-            ingredient_id=ingredient['ingredient_id'],
-            unit=ingredient['unit'],
-            quantity=ingredient['quantity']
-        )
-        db.session.add(meal_ingredient)
-    db.session.commit()
+        cursor.execute('''
+            INSERT INTO meal_ingredients (meal_id, ingredient_id, unit, quantity)
+            VALUES (%s, %s, %s, %s)
+        ''', (new_meal_id, ingredient['ingredient_id'], ingredient['unit'], ingredient['quantity']))
 
-    new_meal.save_meal_version()
-    db.session.commit()
-    return jsonify({"message": "Meal created", "meal_id": new_meal.id}), 201
+    cursor.execute('''
+        INSERT INTO meal_history (meal_id, meal_version, composition)
+        VALUES (%s, %s, %s)
+    ''', (new_meal_id, 1, data))
 
-# Aktualizacja danych posiłku, ale bez zmiany składników
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "Meal created", "meal_id": new_meal_id}), 201
+
 def update_meal(meal_id):
     data = request.get_json()
-    
+
     if data.get('ingredients'):
         return jsonify({"error": "To update ingredients, use the /meals/<meal_id>/ingredients endpoint"}), 400
 
-    meal = Meal.query.get(meal_id)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM meal WHERE id = %s', (meal_id,))
+    meal = cursor.fetchone()
     if not meal:
+        cursor.close()
+        conn.close()
         return jsonify({"message": "Meal not found"}), 404
-    meal.save_meal_version()
 
-    # Update meal details
-    meal.name = data.get('name', meal.name)
-    meal.description = data.get('description', meal.description)
-    meal.diet_id = data.get('diet_id', meal.diet_id)
-    meal.category_id = data.get('category_id', meal.category_id)
-    meal.version += 1
-    meal.last_update = datetime.utcnow()
-    db.session.commit()
+    cursor.execute('''
+        INSERT INTO meal_history (meal_id, meal_version, composition)
+        VALUES (%s, %s, %s)
+    ''', (meal_id, meal['version'], dict(meal)))
 
-    # Save new version to MealHistory
-    meal.save_meal_version()
-    db.session.commit()
-    return jsonify({"message": "Meal updated", "meal_id": meal.id}), 200
+    cursor.execute('''
+        UPDATE meal
+        SET name = %s, description = %s, diet_id = %s, category_id = %s, version = version + 1, last_update = %s
+        WHERE id = %s
+    ''', (data.get('name', meal['name']), data.get('description', meal['description']), data.get('diet_id', meal['diet_id']), data.get('category_id', meal['category_id']), datetime.utcnow(), meal_id))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "Meal updated", "meal_id": meal_id}), 200
 
 def delete_meal(meal_id):
-    meal = Meal.query.get(meal_id)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM meal WHERE id = %s', (meal_id,))
+    meal = cursor.fetchone()
     if not meal:
+        cursor.close()
+        conn.close()
         return jsonify({"message": "Meal not found"}), 404
-    db.session.delete(meal)
-    db.session.commit()
+
+    cursor.execute('DELETE FROM meal WHERE id = %s', (meal_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
     return jsonify({"message": "Meal deleted"})
 
 def get_meal_versions(meal_id):
-    meal_versions = MealHistory.query.filter_by(meal_id=meal_id).all()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM meal_history WHERE meal_id = %s', (meal_id,))
+    meal_versions = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
     return jsonify({
-        "meal_versions": [meal_version.to_dict() for meal_version in meal_versions]
+        "meal_versions": [dict(meal_version) for meal_version in meal_versions]
     })
 
 def get_meal_nutrients(meal_id):
-    meal = Meal.query.get(meal_id)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM meal WHERE id = %s', (meal_id,))
+    meal = cursor.fetchone()
     if not meal:
+        cursor.close()
+        conn.close()
         return jsonify({"message": "Meal not found"}), 404
 
-    nutrients = meal.calculate_nutrients()
-    weight = meal.calculate_total_weight()
+    cursor.execute('SELECT * FROM meal_ingredients WHERE meal_id = %s', (meal_id,))
+    ingredients = cursor.fetchall()
+
+    total_calories = 0
+    total_protein = 0
+    total_carbs = 0
+    total_fat = 0
+    total_weight = 0
+
+    for ingredient in ingredients:
+        cursor.execute('SELECT * FROM ingredients WHERE id = %s', (ingredient['ingredient_id'],))
+        ingredient_details = cursor.fetchone()
+        if not ingredient_details:
+            continue
+
+        quantity = ingredient['quantity']
+        total_weight += quantity
+        total_calories += ingredient_details['kcal_100g'] * quantity / 100
+        total_protein += ingredient_details['protein_100g'] * quantity / 100
+        total_carbs += ingredient_details['carbs_100g'] * quantity / 100
+        total_fat += ingredient_details['fat_100g'] * quantity / 100
+
+    cursor.close()
+    conn.close()
+
+    if total_weight == 0:
+        return jsonify({"message": "No ingredients found for this meal"}), 404
 
     response = {
         "nutrients": {
-            "total_calories": nutrients['calories'],
-            "total_protein": nutrients['protein'],
-            "total_carbs": nutrients['carbs'],
-            "total_fat": nutrients['fat']
+            "total_calories": total_calories,
+            "total_protein": total_protein,
+            "total_carbs": total_carbs,
+            "total_fat": total_fat
         },
         "nutrients_per_100g": {
-            "calories": nutrients['calories'] / weight * 100,
-            "protein": nutrients['protein'] / weight * 100,
-            "carbs": nutrients['carbs'] / weight * 100,
-            "fat": nutrients['fat'] / weight * 100
+            "calories": total_calories / total_weight * 100,
+            "protein": total_protein / total_weight * 100,
+            "carbs": total_carbs / total_weight * 100,
+            "fat": total_fat / total_weight * 100
         }
     }
 

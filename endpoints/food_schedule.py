@@ -1,6 +1,7 @@
 from flask import request, jsonify
-from models import db, FoodSchedule, MealHistory
 from datetime import datetime, timedelta
+from psycopg2.extras import RealDictCursor
+from db_config import get_db_connection
 
 # Pobieranie wszystkich harmonogramów posiłków
 def get_food_schedules():
@@ -10,22 +11,45 @@ def get_food_schedules():
     if limit < 1 or page < 1:
         return jsonify({"error": "Limit and page must be positive integers"}), 400
 
-    food_schedules_pagination = FoodSchedule.query.paginate(page=page, per_page=limit, max_per_page=100, error_out=False)
-    food_schedules = food_schedules_pagination.items
+    offset = (page - 1) * limit
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+    cursor.execute('SELECT COUNT(*) FROM food_schedule')
+    total = cursor.fetchone()['count']
+
+    cursor.execute('''
+        SELECT * FROM food_schedule
+        ORDER BY id
+        LIMIT %s OFFSET %s
+    ''', (limit, offset))
+    food_schedules = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
 
     return jsonify({
-        "food_schedules": [fs.to_dict() for fs in food_schedules],
-        "total": food_schedules_pagination.total,
-        "pages": food_schedules_pagination.pages,
-        "current_page": food_schedules_pagination.page,
-        "page_size": food_schedules_pagination.per_page
+        "food_schedules": food_schedules,
+        "total": total,
+        "pages": (total // limit) + (1 if total % limit > 0 else 0),
+        "current_page": page,
+        "page_size": limit
     })
 
 # Pobieranie harmonogramu posiłków według ID
 def get_food_schedule(schedule_id):
-    food_schedule = FoodSchedule.query.get(schedule_id)
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+    cursor.execute('SELECT * FROM food_schedule WHERE id = %s', (schedule_id,))
+    food_schedule = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
     if food_schedule:
-        return jsonify(food_schedule.to_dict())
+        return jsonify(food_schedule)
     else:
         return jsonify({"message": "Food schedule not found"}), 404
 
@@ -36,51 +60,76 @@ def create_food_schedule():
     if not data.get('meal_id') or not data.get('meal_version') or not data.get('at') or not data.get('user_id'):
         return jsonify({"error": "meal_id, meal_version, at, and user_id are required"}), 400
 
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+
     # Validate meal_id and meal_version
-    meal_history = MealHistory.query.filter_by(meal_id=data['meal_id'], meal_version=data['meal_version']).first()
+    cursor.execute('SELECT * FROM meal_history WHERE meal_id = %s AND meal_version = %s', (data['meal_id'], data['meal_version']))
+    meal_history = cursor.fetchone()
     if not meal_history:
+        cursor.close()
+        conn.close()
         return jsonify({"error": "Meal history not found for the given ID and version"}), 404
 
     # Validate 'at' is greater than current time
     at_time = datetime.strptime(data['at'], '%H:%M:%S %d-%m-%Y')
     if at_time <= datetime.utcnow():
+        cursor.close()
+        conn.close()
         return jsonify({"error": "'at' must be a future time"}), 400
 
     # Create new food schedule
-    new_food_schedule = FoodSchedule(
-        meal_history_id=meal_history.id,
-        at=at_time,  # Kiedy użytkownik ma zjeść posiłek
-        user_id=data['user_id']
-    )
-    db.session.add(new_food_schedule)
-    db.session.commit()
+    cursor.execute('''
+        INSERT INTO food_schedule (meal_history_id, at, user_id)
+        VALUES (%s, %s, %s)
+        RETURNING id
+    ''', (meal_history['id'], at_time, data['user_id']))
+    new_food_schedule_id = cursor.fetchone()['id']
 
-    return jsonify({"message": "Food schedule created", "food_schedule_id": new_food_schedule.id}), 201
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "Food schedule created", "food_schedule_id": new_food_schedule_id}), 201
 
 # Usuwanie harmonogramu posiłków
 def delete_food_schedule(schedule_id):
-    food_schedule = FoodSchedule.query.get(schedule_id)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM food_schedule WHERE id = %s', (schedule_id,))
+    food_schedule = cursor.fetchone()
     if food_schedule:
-        db.session.delete(food_schedule)
-        db.session.commit()
+        cursor.execute('DELETE FROM food_schedule WHERE id = %s', (schedule_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
         return jsonify({"message": "Food schedule deleted"})
     else:
+        cursor.close()
+        conn.close()
         return jsonify({"message": "Food schedule not found"}), 404
 
 # Pobieranie zaplanowanych posiłków dla danego użytkownika
 def get_food_schedule_for_user(user_id):
     try:
-        food_schedules = FoodSchedule.query.filter(
-            FoodSchedule.user_id == user_id
-        ).all()
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        cursor.execute('SELECT * FROM food_schedule WHERE user_id = %s', (user_id,))
+        food_schedules = cursor.fetchall()
 
         result = []
         for schedule in food_schedules:
-            meal_history = MealHistory.query.get(schedule.meal_history_id)
+            cursor.execute('SELECT * FROM meal_history WHERE id = %s', (schedule['meal_history_id'],))
+            meal_history = cursor.fetchone()
             if meal_history:
-                schedule_details = schedule.to_dict()
-                schedule_details['meal'] = meal_history.composition['meal']
+                schedule_details = dict(schedule)
+                schedule_details['meal'] = meal_history['composition']['meal']
                 result.append(schedule_details)
+
+        cursor.close()
+        conn.close()
 
         return jsonify(result)
 
@@ -93,19 +142,26 @@ def get_food_schedule_for_user_by_date(user_id, date):
         start_date = datetime.strptime(date, '%d-%m-%Y')
         end_date = start_date + timedelta(days=1)
 
-        food_schedules = FoodSchedule.query.filter(
-            FoodSchedule.user_id == user_id,
-            FoodSchedule.at >= start_date,
-            FoodSchedule.at < end_date
-        ).all()
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        cursor.execute('''
+            SELECT * FROM food_schedule
+            WHERE user_id = %s AND at >= %s AND at < %s
+        ''', (user_id, start_date, end_date))
+        food_schedules = cursor.fetchall()
 
         result = []
         for schedule in food_schedules:
-            meal_history = MealHistory.query.get(schedule.meal_history_id)
+            cursor.execute('SELECT * FROM meal_history WHERE id = %s', (schedule['meal_history_id'],))
+            meal_history = cursor.fetchone()
             if meal_history:
-                schedule_details = schedule.to_dict()
-                schedule_details['meal'] = meal_history.composition['meal']
+                schedule_details = dict(schedule)
+                schedule_details['meal'] = meal_history['composition']['meal']
                 result.append(schedule_details)
+
+        cursor.close()
+        conn.close()
 
         return jsonify(result)
 

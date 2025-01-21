@@ -1,61 +1,71 @@
 from datetime import datetime
-from models import db, User, UserDetails, Diet, UserDiets, MealCategory, Meal, LinkTypes
+import psycopg2
+from db_config import get_db_connection
 
 def seed_database():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
     # Tworzenie linków
-    link_type_activate = LinkTypes.query.filter_by(type="activate").first()
-    link_type_restore = LinkTypes.query.filter_by(type="restore").first()
+    cursor.execute('SELECT * FROM link_types WHERE type = %s', ('activate',))
+    link_type_activate = cursor.fetchone()
+    cursor.execute('SELECT * FROM link_types WHERE type = %s', ('restore',))
+    link_type_restore = cursor.fetchone()
 
     if not link_type_activate:
         print("Creating link type 'activate'")
-        link_type_activate = LinkTypes(type="activate")
-        db.session.add(link_type_activate)
+        cursor.execute('INSERT INTO link_types (type) VALUES (%s)', ('activate',))
     if not link_type_restore:
         print("Creating link type 'restore'")
-        link_type_restore = LinkTypes(type="restore")
-        db.session.add(link_type_restore)
-    db.session.commit()
+        cursor.execute('INSERT INTO link_types (type) VALUES (%s)', ('restore',))
+    conn.commit()
 
     # Tworzenie diet
-    diet_normal = Diet.query.filter_by(name="Normal").first()
-    diet_keto = Diet.query.filter_by(name="Keto").first()
-    diet_vegan = Diet.query.filter_by(name="Vegan").first()
+    cursor.execute('SELECT * FROM diet WHERE name = %s', ('Normal',))
+    diet_normal = cursor.fetchone()
+    cursor.execute('SELECT * FROM diet WHERE name = %s', ('Keto',))
+    diet_keto = cursor.fetchone()
+    cursor.execute('SELECT * FROM diet WHERE name = %s', ('Vegan',))
+    diet_vegan = cursor.fetchone()
 
     if not diet_normal:
         print("Creating diet 'Normal'")
-        diet_normal = Diet(name="Normal", description="Balanced diet.")
-        db.session.add(diet_normal)
+        cursor.execute('INSERT INTO diet (name, description) VALUES (%s, %s)', ('Normal', 'Balanced diet.'))
     if not diet_keto:
         print("Creating diet 'Keto'")
-        diet_keto = Diet(name="Keto", description="Low-carb, high-fat diet.")
-        db.session.add(diet_keto)
+        cursor.execute('INSERT INTO diet (name, description) VALUES (%s, %s)', ('Keto', 'Low-carb, high-fat diet.'))
     if not diet_vegan:
         print("Creating diet 'Vegan'")
-        diet_vegan = Diet(name="Vegan", description="Plant-based diet without animal products.")
-        db.session.add(diet_vegan)
-    db.session.commit()
+        cursor.execute('INSERT INTO diet (name, description) VALUES (%s, %s)', ('Vegan', 'Plant-based diet without animal products.'))
+    conn.commit()
 
-    # # Tworzenie kategorii posiłków
-    category_breakfast = MealCategory.query.filter_by(category="Breakfast").first()
+    # Tworzenie kategorii posiłków
+    cursor.execute('SELECT * FROM meal_category WHERE category = %s', ('Breakfast',))
+    category_breakfast = cursor.fetchone()
     if not category_breakfast:
         print("Creating meal category 'Breakfast'")
-        category_breakfast = MealCategory(category="Breakfast", description="Morning meal")
-        db.session.add(category_breakfast)
-    category_lunch = MealCategory.query.filter_by(category="Lunch").first()
+        cursor.execute('INSERT INTO meal_category (category, description) VALUES (%s, %s)', ('Breakfast', 'Morning meal'))
+
+    cursor.execute('SELECT * FROM meal_category WHERE category = %s', ('Lunch',))
+    category_lunch = cursor.fetchone()
     if not category_lunch:
         print("Creating meal category 'Lunch'")
-        category_lunch = MealCategory(category="Lunch", description="Midday meal")
-        db.session.add(category_lunch)
-    category_dinner = MealCategory.query.filter_by(category="Dinner").first()
+        cursor.execute('INSERT INTO meal_category (category, description) VALUES (%s, %s)', ('Lunch', 'Midday meal'))
+
+    cursor.execute('SELECT * FROM meal_category WHERE category = %s', ('Dinner',))
+    category_dinner = cursor.fetchone()
     if not category_dinner:
         print("Creating meal category 'Dinner'")
-        category_dinner = MealCategory(category="Dinner", description="Evening meal")
-        db.session.add(category_dinner)
-    category_snack = MealCategory.query.filter_by(category="Snack").first()
+        cursor.execute('INSERT INTO meal_category (category, description) VALUES (%s, %s)', ('Dinner', 'Evening meal'))
+
+    cursor.execute('SELECT * FROM meal_category WHERE category = %s', ('Snack',))
+    category_snack = cursor.fetchone()
     if not category_snack:
         print("Creating meal category 'Snack'")
-        category_snack = MealCategory(category="Snack", description="Between meals")
-        db.session.add(category_snack)
-    db.session.commit()
+        cursor.execute('INSERT INTO meal_category (category, description) VALUES (%s, %s)', ('Snack', 'Between meals'))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
 
     print("Database seeded successfully.")

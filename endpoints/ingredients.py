@@ -1,6 +1,6 @@
 from flask import request, jsonify
-from models import db, Ingredients
-from sqlalchemy import func
+from psycopg2.extras import RealDictCursor
+from db_config import get_db_connection
 
 def get_ingredients():
     limit = request.args.get('limit', default=10, type=int)
@@ -9,34 +9,63 @@ def get_ingredients():
     if limit < 1 or page < 1:
         return jsonify({"error": "Limit and page must be positive integers"}), 400
 
-    ingredients_pagination = Ingredients.query.paginate(page=page, per_page=limit, max_per_page=100, error_out=False)
-    ingredients = ingredients_pagination.items
+    offset = (page - 1) * limit
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+    cursor.execute('SELECT COUNT(*) FROM ingredients')
+    total = cursor.fetchone()['count']
+
+    cursor.execute('''
+        SELECT * FROM ingredients
+        ORDER BY id
+        LIMIT %s OFFSET %s
+    ''', (limit, offset))
+    ingredients = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
     return jsonify({
-        "ingredients": [ing.to_dict() for ing in ingredients],
-        "total": ingredients_pagination.total,
-        "pages": ingredients_pagination.pages,
-        "current_page": ingredients_pagination.page,
-        "page_size": ingredients_pagination.per_page
+        "ingredients": ingredients,
+        "total": total,
+        "pages": (total // limit) + (1 if total % limit > 0 else 0),
+        "current_page": page,
+        "page_size": limit
     })
 
 def get_ingredient_by_id(ing_id):
-    ingredient = Ingredients.query.get(ing_id)
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+    cursor.execute('SELECT * FROM ingredients WHERE id = %s', (ing_id,))
+    ingredient = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
     if ingredient:
-        return jsonify(ingredient.to_dict())
+        return jsonify(ingredient)
     else:
         return jsonify({"message": "Ingredient not found"}), 404
 
-def search_ingredients(query):
+def search_ingredients():
+    query = request.args.get('query', default='', type=str)
     top = request.args.get('top', default=10, type=int)
-    
-    # Use full-text search for better matching and filter out ingredients with null product_quantity
-    results = Ingredients.query.filter(
-        func.to_tsvector('english', Ingredients.product_name + ' ' + Ingredients.generic_name).match(query),
-        Ingredients.product_quantity.isnot(None)
-    ).limit(top).all()
-    
-    # Return all fields in the row
-    return jsonify([{
-        column.name: getattr(item, column.name)
-        for column in Ingredients.__table__.columns
-    } for item in results])
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+    cursor.execute('''
+        SELECT * FROM ingredients
+        WHERE to_tsvector('english', product_name || ' ' || generic_name) @@ plainto_tsquery('english', %s)
+        AND product_quantity IS NOT NULL
+        LIMIT %s
+    ''', (query, top))
+    results = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return jsonify(results)

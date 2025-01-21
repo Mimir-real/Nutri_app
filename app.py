@@ -1,15 +1,13 @@
 from flask import Flask, jsonify
 from config import Config
-from models import db
 from seeds import seed_database
-from flask_migrate import Migrate
 from dotenv import load_dotenv
 from db_import import import_database
 import os
 import sys
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
 from flask_cors import CORS
-from flask_migrate import Migrate
+from db_config import get_db_connection, db_create_all
 
 load_dotenv()
 
@@ -17,8 +15,6 @@ load_dotenv()
 app = Flask(__name__)
 app.config.from_object(Config)
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')  # Load from environment variable
-db.init_app(app)
-migrate = Migrate(app, db)
 jwt = JWTManager(app)
 CORS(app)  # Dodaj tę linię, aby włączyć CORS dla całej aplikacji
 
@@ -34,7 +30,7 @@ def seed_base_database():
 # Funkcja do inicjalizacji bazy danych
 def setup_database():
     with app.app_context():
-        db.create_all()
+        db_create_all()
         if 'dbimport' in sys.argv or 'importdb' in sys.argv:
             print('Importing database, this may take a while')
             import_database()
@@ -143,7 +139,7 @@ app.add_url_rule('/users/<int:user_id>/nutrients/<date>', view_func=calculate_da
 
 # Login & Register Endpoints
 
-from endpoints.auth import login, register
+from endpoints.auth import login #, register
 
 app.add_url_rule('/login', view_func=login, methods=['POST'])
 # app.add_url_rule('/register', view_func=register, methods=['POST'])
