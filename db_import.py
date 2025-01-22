@@ -2,12 +2,13 @@ import csv
 import gzip
 import psycopg2
 from db_config import get_db_connection
+from psycopg2.extras import RealDictCursor
 
 csv.field_size_limit(2**31 - 1)
 
 def import_database():
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
 
     with gzip.open('en.openfoodfacts.org.products.csv.gz', 'rt', encoding='utf-8') as f:
         reader = csv.DictReader(f, delimiter='\t', quoting=csv.QUOTE_NONE)

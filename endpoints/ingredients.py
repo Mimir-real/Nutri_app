@@ -1,7 +1,9 @@
 from flask import request, jsonify
 from psycopg2.extras import RealDictCursor
 from db_config import get_db_connection
+from endpoints.auth import login_required
 
+@login_required
 def get_ingredients():
     limit = request.args.get('limit', default=10, type=int)
     page = request.args.get('page', default=1, type=int)
@@ -35,6 +37,7 @@ def get_ingredients():
         "page_size": limit
     })
 
+@login_required
 def get_ingredient_by_id(ing_id):
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -50,6 +53,7 @@ def get_ingredient_by_id(ing_id):
     else:
         return jsonify({"message": "Ingredient not found"}), 404
 
+@login_required
 def search_ingredients():
     query = request.args.get('query', default='', type=str)
     top = request.args.get('top', default=10, type=int)

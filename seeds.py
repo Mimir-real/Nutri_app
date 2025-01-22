@@ -1,10 +1,11 @@
 from datetime import datetime
 import psycopg2
 from db_config import get_db_connection
+from psycopg2.extras import RealDictCursor
 
 def seed_database():
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
 
     # Tworzenie linków
     cursor.execute('SELECT * FROM link_types WHERE type = %s', ('activate',))

@@ -68,13 +68,13 @@ app.add_url_rule('/users/<int:user_id>/diets/<int:diet_id>', view_func=remove_di
 app.add_url_rule('/users/<int:user_id>/diets', view_func=get_user_diets, methods=['GET'])
 
 # Meals Endpoints
-from endpoints.meals import get_meals, get_meal, create_meal, update_meal, delete_meal, search_meals, get_meal_versions, get_meal_nutrients
+from endpoints.meals import get_meals, get_meal, create_meal, update_meal, search_meals, get_meal_versions, get_meal_nutrients
 app.add_url_rule('/meals', view_func=get_meals, methods=['GET'])
 app.add_url_rule('/meals/<int:meal_id>', view_func=get_meal, methods=['GET'])
 app.add_url_rule('/meals/search', view_func=search_meals, methods=['GET'])
 app.add_url_rule('/meals', view_func=create_meal, methods=['POST'])
 app.add_url_rule('/meals/<int:meal_id>', view_func=update_meal, methods=['PUT', 'PATCH'])
-app.add_url_rule('/meals/<int:meal_id>', view_func=delete_meal, methods=['DELETE'])
+# app.add_url_rule('/meals/<int:meal_id>', view_func=delete_meal, methods=['DELETE']) # Brak możliwości usuwania, do zaimplementowania w przyszłości - wymaga więcej uwagi przez relacje z innymi tabelami (np.: Historia zmian i możliwe relacje historii do food log i food schedule)
 app.add_url_rule('/meals/<int:meal_id>/versions', view_func=get_meal_versions, methods=['GET'])
 app.add_url_rule('/meals/<int:meal_id>/nutrients', view_func=get_meal_nutrients, methods=['GET'])
 
@@ -107,7 +107,7 @@ app.add_url_rule('/meals/<int:meal_id>/ingredients/<int:ingredient_id>', view_fu
 from endpoints.ingredients import get_ingredients, get_ingredient_by_id, search_ingredients
 app.add_url_rule('/ingredients', view_func=get_ingredients, methods=['GET'])
 app.add_url_rule('/ingredients/<int:ing_id>', view_func=get_ingredient_by_id, methods=['GET'])
-app.add_url_rule('/ingredients/search/<query>', view_func=search_ingredients, methods=['GET'])
+app.add_url_rule('/ingredients/search', view_func=search_ingredients, methods=['GET'])
 
 # Food schedule Endpoints
 from endpoints.food_schedule import get_food_schedules, get_food_schedule, create_food_schedule, delete_food_schedule, get_food_schedule_for_user, get_food_schedule_for_user_by_date
