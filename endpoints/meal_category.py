@@ -6,6 +6,35 @@ from endpoints.auth import login_required, verify_identity
 
 @login_required
 def get_meal_categories():
+    """
+    Get all meal categories
+    ---
+    tags:
+      - Meal Categories
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: A list of meal categories
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              description:
+                type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -26,6 +55,59 @@ def get_meal_categories():
 
 @login_required
 def assign_category_to_meal(meal_id):
+    """
+    Assign a category to a meal
+    ---
+    tags:
+      - Meal Categories
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: meal_id
+        type: integer
+        required: true
+        description: The ID of the meal to assign the category to
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - category_id
+          properties:
+            category_id:
+              type: integer
+              description: The ID of the category to assign
+    responses:
+      200:
+        description: Category assigned to meal
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: Meal or category not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         data = request.get_json()
         if not data.get('category_id'):
@@ -79,6 +161,49 @@ def assign_category_to_meal(meal_id):
 
 @login_required
 def remove_category_from_meal(meal_id):
+    """
+    Remove a category from a meal
+    ---
+    tags:
+      - Meal Categories
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: meal_id
+        type: integer
+        required: true
+        description: The ID of the meal to remove the category from
+    responses:
+      200:
+        description: Category removed from meal
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: Meal not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -121,6 +246,59 @@ def remove_category_from_meal(meal_id):
 
 @login_required
 def update_category_of_meal(meal_id):
+    """
+    Update the category of a meal
+    ---
+    tags:
+      - Meal Categories
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: meal_id
+        type: integer
+        required: true
+        description: The ID of the meal to update the category for
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - category_id
+          properties:
+            category_id:
+              type: integer
+              description: The ID of the new category
+    responses:
+      200:
+        description: Category updated for meal
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: Meal or category not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         data = request.get_json()
         if not data.get('category_id'):

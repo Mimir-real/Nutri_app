@@ -9,6 +9,69 @@ from flask_jwt_extended import get_jwt_identity
 # Pobieranie wszystkich logów posiłków
 @login_required
 def get_food_logs():
+    """
+    Get all food logs
+    ---
+    tags:
+      - Food Logs
+    security:
+      - Bearer: []
+    parameters:
+      - in: query
+        name: limit
+        type: integer
+        description: Number of food logs to return
+        default: 10
+      - in: query
+        name: page
+        type: integer
+        description: Page number
+        default: 1
+    responses:
+      200:
+        description: A list of food logs
+        schema:
+          type: object
+          properties:
+            food_logs:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  user_id:
+                    type: integer
+                  meal_history_id:
+                    type: integer
+                  portion:
+                    type: number
+                  at:
+                    type: string
+                    format: date-time
+            total:
+              type: integer
+            pages:
+              type: integer
+            current_page:
+              type: integer
+            page_size:
+              type: integer
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         limit = request.args.get('limit', default=10, type=int)
         page = request.args.get('page', default=1, type=int)
@@ -51,6 +114,51 @@ def get_food_logs():
 # Pobieranie logu posiłku według ID
 @login_required
 def get_food_log(food_log_id):
+    """
+    Get a food log by ID
+    ---
+    tags:
+      - Food Logs
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: food_log_id
+        type: integer
+        required: true
+        description: The ID of the food log to retrieve
+    responses:
+      200:
+        description: A food log object
+        schema:
+          type: object
+          properties:
+            id:
+              type: integer
+            user_id:
+              type: integer
+            meal_history_id:
+              type: integer
+            portion:
+              type: number
+            at:
+              type: string
+              format: date-time
+      404:
+        description: Food log not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -75,6 +183,71 @@ def get_food_log(food_log_id):
 # Tworzenie nowego logu posiłku
 @login_required
 def create_food_log():
+    """
+    Create a new food log
+    ---
+    tags:
+      - Food Logs
+    security:
+      - Bearer: []
+    parameters:
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - meal_id
+            - meal_version
+            - portion
+            - at
+          properties:
+            meal_id:
+              type: integer
+              description: The ID of the meal
+            meal_version:
+              type: integer
+              description: The version of the meal
+            portion:
+              type: number
+              description: The portion size
+            at:
+              type: string
+              format: date-time
+              description: The time of the meal in 'HH:MM:SS DD-MM-YYYY' format
+    responses:
+      201:
+        description: Food log created
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+            food_log_id:
+              type: integer
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: Meal history not found
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+            message:
+              type: string
+    """
     try:
         data = request.get_json()
 
@@ -128,6 +301,51 @@ def create_food_log():
 # Usuwanie logu posiłku
 @login_required
 def delete_food_log(food_log_id):
+    """
+    Delete a food log
+    ---
+    tags:
+      - Food Logs
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: food_log_id
+        type: integer
+        required: true
+        description: The ID of the food log to delete
+    responses:
+      200:
+        description: Food log deleted
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      404:
+        description: Food log not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      403:
+        description: Unauthorized
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -162,6 +380,93 @@ def delete_food_log(food_log_id):
 # Przeliczanie dziennego spożycia kalorii i makroskładników
 @login_required
 def calculate_daily_nutrients(user_id, date):
+    """
+    Calculate daily nutrients
+    ---
+    tags:
+      - Food Logs
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+        description: The ID of the user
+      - in: path
+        name: date
+        type: string
+        required: true
+        description: The date in 'DD-MM-YYYY' format
+      - in: query
+        name: compareDetails
+        type: boolean
+        description: Whether to include comparison details
+    responses:
+      200:
+        description: Daily nutrients calculated
+        schema:
+          type: object
+          properties:
+            date:
+              type: string
+            nutrients:
+              type: object
+              properties:
+                total_kcal:
+                  type: number
+                total_protein:
+                  type: number
+                total_carbs:
+                  type: number
+                total_fat:
+                  type: number
+            details:
+              type: object
+              properties:
+                kcal_goal:
+                  type: number
+                fat_goal:
+                  type: number
+                protein_goal:
+                  type: number
+                carb_goal:
+                  type: number
+            percentage:
+              type: object
+              properties:
+                kcal_percentage:
+                  type: number
+                fat_percentage:
+                  type: number
+                protein_percentage:
+                  type: number
+                carbs_percentage:
+                  type: number
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      403:
+        description: Unauthorized
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     verifivation = verify_identity(user_id, 'You can only calculate nutrients for your own account')
     if verifivation is not None:
         return verifivation
@@ -247,6 +552,69 @@ def calculate_daily_nutrients(user_id, date):
 # Pobieranie logów posiłków dla danego użytkownika z danego dnia
 @login_required
 def get_food_logs_by_date_for_user(user_id, date):
+    """
+    Get food logs by date for a user
+    ---
+    tags:
+      - Food Logs
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+        description: The ID of the user
+      - in: path
+        name: date
+        type: string
+        required: true
+        description: The date in 'DD-MM-YYYY' format
+    responses:
+      200:
+        description: A list of food logs
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              user_id:
+                type: integer
+              meal_history_id:
+                type: integer
+              portion:
+                type: number
+              at:
+                type: string
+                format: date-time
+              meal:
+                type: string
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      403:
+        description: Unauthorized
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     verifivation = verify_identity(user_id, 'You can only calculate nutrients for your own account')
     if verifivation is not None:
         return verifivation
@@ -289,6 +657,57 @@ def get_food_logs_by_date_for_user(user_id, date):
 
 @login_required
 def get_food_logs_for_user(user_id):
+    """
+    Get food logs for a user
+    ---
+    tags:
+      - Food Logs
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+        description: The ID of the user
+    responses:
+      200:
+        description: A list of food logs
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              user_id:
+                type: integer
+              meal_history_id:
+                type: integer
+              portion:
+                type: number
+              at:
+                type: string
+                format: date-time
+              meal:
+                type: string
+      403:
+        description: Unauthorized
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     verifivation = verify_identity(user_id, 'You can only calculate nutrients for your own account')
     if verifivation is not None:
         return verifivation

@@ -6,6 +6,128 @@ from endpoints.auth import login_required, verify_identity
 
 @login_required
 def generate_shopping_list(user_id):
+    """
+    Generate a shopping list for a user
+    ---
+    tags:
+      - Shopping List
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+        description: The ID of the user to generate the shopping list for
+      - in: query
+        name: days
+        type: integer
+        description: Number of days to generate the shopping list for
+        default: 7
+    responses:
+      200:
+        description: Shopping list generated
+        schema:
+          type: object
+          properties:
+            meals:
+              type: array
+              items:
+                type: object
+                properties:
+                  meal:
+                    type: string
+                  ingredients:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        ingredient:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            product_name:
+                              type: string
+                            generic_name:
+                              type: string
+                            kcal_100g:
+                              type: number
+                            protein_100g:
+                              type: number
+                            carbs_100g:
+                              type: number
+                            fat_100g:
+                              type: number
+                            brand:
+                              type: string
+                            barcode:
+                              type: string
+                            image_url:
+                              type: string
+                            labels_tags:
+                              type: string
+                            product_quantity:
+                              type: number
+                            allergens:
+                              type: string
+                        quantity:
+                          type: number
+                        unit:
+                          type: string
+            ingredients_summary:
+              type: array
+              items:
+                type: object
+                properties:
+                  ingredient:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      product_name:
+                        type: string
+                      generic_name:
+                        type: string
+                      kcal_100g:
+                        type: number
+                      protein_100g:
+                        type: number
+                      carbs_100g:
+                        type: number
+                      fat_100g:
+                        type: number
+                      brand:
+                        type: string
+                      barcode:
+                        type: string
+                      image_url:
+                        type: string
+                      labels_tags:
+                        type: string
+                      product_quantity:
+                        type: number
+                      allergens:
+                        type: string
+                  total_quantity:
+                    type: number
+                  unit:
+                    type: string
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     verifivation = verify_identity(user_id, 'You can only generate shopping list for yourself')
     if verifivation is not None:
         return verifivation

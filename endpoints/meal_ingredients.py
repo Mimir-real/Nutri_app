@@ -8,6 +8,82 @@ import datetime
 
 @login_required
 def get_meal_ingredients(meal_id):
+    """
+    Get ingredients for a meal
+    ---
+    tags:
+      - Meal Ingredients
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: meal_id
+        type: integer
+        required: true
+        description: The ID of the meal to retrieve ingredients for
+    responses:
+      200:
+        description: A list of ingredients for the meal
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              ingredient:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  product_name:
+                    type: string
+                  generic_name:
+                    type: string
+                  kcal_100g:
+                    type: number
+                  protein_100g:
+                    type: number
+                  carbs_100g:
+                    type: number
+                  fat_100g:
+                    type: number
+                  brand:
+                    type: string
+                  barcode:
+                    type: string
+                  image_url:
+                    type: string
+                  labels_tags:
+                    type: string
+                  product_quantity:
+                    type: number
+                  allergens:
+                    type: string
+              details:
+                type: object
+                properties:
+                  meal_id:
+                    type: integer
+                  ingredient_id:
+                    type: integer
+                  unit:
+                    type: string
+                  quantity:
+                    type: number
+      404:
+        description: Meal not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -61,6 +137,67 @@ def get_meal_ingredients(meal_id):
 
 @login_required
 def replace_meal_ingredients(meal_id):
+    """
+    Replace ingredients for a meal
+    ---
+    tags:
+      - Meal Ingredients
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: meal_id
+        type: integer
+        required: true
+        description: The ID of the meal to replace ingredients for
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - ingredients
+          properties:
+            ingredients:
+              type: array
+              items:
+                type: object
+                properties:
+                  ingredient_id:
+                    type: integer
+                  unit:
+                    type: string
+                  quantity:
+                    type: number
+    responses:
+      200:
+        description: Meal ingredients updated successfully
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: Meal not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         data = request.get_json()
 
@@ -128,6 +265,67 @@ def replace_meal_ingredients(meal_id):
 
 @login_required
 def add_meal_ingredient(meal_id):
+    """
+    Add an ingredient to a meal
+    ---
+    tags:
+      - Meal Ingredients
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: meal_id
+        type: integer
+        required: true
+        description: The ID of the meal to add the ingredient to
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - ingredient_id
+            - unit
+            - quantity
+          properties:
+            ingredient_id:
+              type: integer
+              description: The ID of the ingredient to add
+            unit:
+              type: string
+              description: The unit of the ingredient
+            quantity:
+              type: number
+              description: The quantity of the ingredient
+    responses:
+      201:
+        description: Ingredient added successfully
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: Meal not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         data = request.get_json()
 
@@ -192,6 +390,47 @@ def add_meal_ingredient(meal_id):
 
 @login_required
 def remove_meal_ingredient(meal_id, ingredient_id):
+    """
+    Remove an ingredient from a meal
+    ---
+    tags:
+      - Meal Ingredients
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: meal_id
+        type: integer
+        required: true
+        description: The ID of the meal to remove the ingredient from
+      - in: path
+        name: ingredient_id
+        type: integer
+        required: true
+        description: The ID of the ingredient to remove
+    responses:
+      200:
+        description: Ingredient removed successfully
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      404:
+        description: Ingredient not found in meal
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)

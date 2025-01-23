@@ -5,6 +5,59 @@ from endpoints.auth import login_required, verify_identity
 
 @login_required
 def assign_diet_to_meal(meal_id):
+    """
+    Assign a diet to a meal
+    ---
+    tags:
+      - Meal Diet
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: meal_id
+        type: integer
+        required: true
+        description: The ID of the meal to assign the diet to
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - diet_id
+          properties:
+            diet_id:
+              type: integer
+              description: The ID of the diet to assign
+    responses:
+      200:
+        description: Diet assigned to meal
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: Meal or diet not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         data = request.get_json()
         if not data.get('diet_id'):
@@ -59,6 +112,49 @@ def assign_diet_to_meal(meal_id):
 
 @login_required
 def remove_diet_from_meal(meal_id):
+    """
+    Remove a diet from a meal
+    ---
+    tags:
+      - Meal Diet
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: meal_id
+        type: integer
+        required: true
+        description: The ID of the meal to remove the diet from
+    responses:
+      200:
+        description: Diet removed from meal
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: Meal not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -102,6 +198,59 @@ def remove_diet_from_meal(meal_id):
 
 @login_required
 def update_diet_of_meal(meal_id):
+    """
+    Update the diet of a meal
+    ---
+    tags:
+      - Meal Diet
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: meal_id
+        type: integer
+        required: true
+        description: The ID of the meal to update the diet for
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - diet_id
+          properties:
+            diet_id:
+              type: integer
+              description: The ID of the new diet
+    responses:
+      200:
+        description: Diet updated for meal
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: Meal or diet not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         data = request.get_json()
         if not data.get('diet_id'):

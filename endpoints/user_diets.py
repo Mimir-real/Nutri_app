@@ -7,6 +7,63 @@ from endpoints.auth import login_required, verify_identity
 
 @login_required
 def assign_diet_to_user(user_id):
+    """
+    Assign a diet to a user
+    ---
+    tags:
+      - User Diets
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+        description: The ID of the user to assign the diet to
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - diet_id
+          properties:
+            diet_id:
+              type: integer
+              description: The ID of the diet to assign
+            allowed:
+              type: boolean
+              description: Whether the diet is allowed
+              default: true
+    responses:
+      201:
+        description: Diet assigned to user
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: User or diet not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         verifivation = verify_identity(user_id, 'You can only assign diets to yourself')
         if verifivation is not None:
@@ -60,6 +117,47 @@ def assign_diet_to_user(user_id):
 
 @login_required
 def remove_diet_from_user(user_id, diet_id):
+    """
+    Remove a diet from a user
+    ---
+    tags:
+      - User Diets
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+        description: The ID of the user to remove the diet from
+      - in: path
+        name: diet_id
+        type: integer
+        required: true
+        description: The ID of the diet to remove
+    responses:
+      200:
+        description: Diet removed from user
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      404:
+        description: User diet not found
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         verifivation = verify_identity(user_id, 'You can only remove diets from yourself')
         if verifivation is not None:
@@ -95,6 +193,41 @@ def remove_diet_from_user(user_id, diet_id):
         return jsonify({"error": str(e)}), 500
 
 def get_user_diets(user_id):
+    """
+    Get diets for a user
+    ---
+    tags:
+      - User Diets
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+        description: The ID of the user to retrieve diets for
+    responses:
+      200:
+        description: A list of user diets
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              user_id:
+                type: integer
+              diet_id:
+                type: integer
+              allowed:
+                type: boolean
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)

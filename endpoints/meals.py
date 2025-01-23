@@ -8,6 +8,75 @@ import json
 
 @login_required
 def get_meals():
+    """
+    Get a list of meals
+    ---
+    tags:
+      - Meals
+    security:
+      - Bearer: []
+    parameters:
+      - in: query
+        name: limit
+        type: integer
+        description: Number of meals to return
+        default: 10
+      - in: query
+        name: page
+        type: integer
+        description: Page number
+        default: 1
+    responses:
+      200:
+        description: A list of meals
+        schema:
+          type: object
+          properties:
+            meals:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  creator_id:
+                    type: integer
+                  diet_id:
+                    type: integer
+                  category_id:
+                    type: integer
+                  version:
+                    type: integer
+                  last_update:
+                    type: string
+                    format: date-time
+            total:
+              type: integer
+            pages:
+              type: integer
+            current_page:
+              type: integer
+            page_size:
+              type: integer
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     limit = request.args.get('limit', default=10, type=int)
     page = request.args.get('page', default=1, type=int)
 
@@ -51,6 +120,57 @@ def get_meals():
 
 @login_required
 def get_meal(meal_id):
+    """
+    Get a meal by ID
+    ---
+    tags:
+      - Meals
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: meal_id
+        type: integer
+        required: true
+        description: The ID of the meal to retrieve
+    responses:
+      200:
+        description: A meal object
+        schema:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            description:
+              type: string
+            creator_id:
+              type: integer
+            diet_id:
+              type: integer
+            category_id:
+              type: integer
+            version:
+              type: integer
+            last_update:
+              type: string
+              format: date-time
+      404:
+        description: Meal not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -79,6 +199,89 @@ def get_meal(meal_id):
 
 @login_required
 def search_meals():
+    """
+    Search for meals
+    ---
+    tags:
+      - Meals
+    security:
+      - Bearer: []
+    parameters:
+      - in: query
+        name: query
+        type: string
+        description: The search query
+        default: ''
+      - in: query
+        name: limit
+        type: integer
+        description: Number of meals to return
+        default: 10
+      - in: query
+        name: page
+        type: integer
+        description: Page number
+        default: 1
+      - in: query
+        name: allowMore
+        type: boolean
+        description: Whether to allow more results
+        default: False
+      - in: query
+        name: user_id
+        type: integer
+        description: The ID of the user
+    responses:
+      200:
+        description: A list of meals
+        schema:
+          type: object
+          properties:
+            meals:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  creator_id:
+                    type: integer
+                  diet_id:
+                    type: integer
+                  category_id:
+                    type: integer
+                  version:
+                    type: integer
+                  last_update:
+                    type: string
+                    format: date-time
+            total:
+              type: integer
+            pages:
+              type: integer
+            current_page:
+              type: integer
+            page_size:
+              type: integer
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     query = request.args.get('query', default='', type=str)
     limit = request.args.get('limit', default=10, type=int)
     page = request.args.get('page', default=1, type=int)
@@ -140,6 +343,78 @@ def search_meals():
 
 @login_required
 def create_meal():
+    """
+    Create a new meal
+    ---
+    tags:
+      - Meals
+    security:
+      - Bearer: []
+    parameters:
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+              description: The name of the meal
+            description:
+              type: string
+              description: The description of the meal
+            diet_id:
+              type: integer
+              description: The ID of the diet
+            category_id:
+              type: integer
+              description: The ID of the category
+            ingredients:
+              type: array
+              items:
+                type: object
+                properties:
+                  ingredient_id:
+                    type: integer
+                  unit:
+                    type: string
+                  quantity:
+                    type: number
+    responses:
+      201:
+        description: Meal created
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+            meal_id:
+              type: integer
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: Category or diet not found
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+            message:
+              type: string
+    """
     data = request.get_json()
 
     if not data.get('name'):
@@ -203,6 +478,68 @@ def create_meal():
 
 @login_required
 def update_meal(meal_id):
+    """
+    Update a meal
+    ---
+    tags:
+      - Meals
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: meal_id
+        type: integer
+        required: true
+        description: The ID of the meal to update
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+              description: The name of the meal
+            description:
+              type: string
+              description: The description of the meal
+            diet_id:
+              type: integer
+              description: The ID of the diet
+            category_id:
+              type: integer
+              description: The ID of the category
+    responses:
+      200:
+        description: Meal updated
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+            meal_id:
+              type: integer
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: Meal not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     data = request.get_json()
 
     if data.get('ingredients'):
@@ -257,6 +594,51 @@ def update_meal(meal_id):
 # Usuwanie wymaga więcej uwagi - relacje z MealHistory itp. - brak dostępu dla użytkownika
 @login_required
 def delete_meal(meal_id):
+    """
+    Delete a meal
+    ---
+    tags:
+      - Meals
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: meal_id
+        type: integer
+        required: true
+        description: The ID of the meal to delete
+    responses:
+      200:
+        description: Meal deleted
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      404:
+        description: Meal not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      403:
+        description: Unauthorized
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -292,6 +674,48 @@ def delete_meal(meal_id):
 
 @login_required
 def get_meal_versions(meal_id):
+    """
+    Get versions of a meal
+    ---
+    tags:
+      - Meals
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: meal_id
+        type: integer
+        required: true
+        description: The ID of the meal to retrieve versions for
+    responses:
+      200:
+        description: A list of meal versions
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              meal_id:
+                type: integer
+              meal_version:
+                type: integer
+              composition:
+                type: string
+      404:
+        description: Meal not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -315,6 +739,62 @@ def get_meal_versions(meal_id):
 
 @login_required
 def get_meal_nutrients(meal_id):
+    """
+    Get nutrients of a meal
+    ---
+    tags:
+      - Meals
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: meal_id
+        type: integer
+        required: true
+        description: The ID of the meal to retrieve nutrients for
+    responses:
+      200:
+        description: Nutrients of the meal
+        schema:
+          type: object
+          properties:
+            nutrients:
+              type: object
+              properties:
+                total_calories:
+                  type: number
+                total_protein:
+                  type: number
+                total_carbs:
+                  type: number
+                total_fat:
+                  type: number
+            nutrients_per_100g:
+              type: object
+              properties:
+                calories:
+                  type: number
+                protein:
+                  type: number
+                carbs:
+                  type: number
+                fat:
+                  type: number
+      404:
+        description: Meal not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)

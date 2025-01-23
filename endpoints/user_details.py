@@ -6,6 +6,87 @@ from endpoints.auth import login_required, verify_identity
 
 @login_required
 def create_user_details(user_id):
+    """
+    Create user details
+    ---
+    tags:
+      - User Details
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+        description: The ID of the user to create details for
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - age
+            - gender
+            - height
+            - weight
+            - kcal_goal
+            - fat_goal
+            - protein_goal
+            - carb_goal
+          properties:
+            age:
+              type: integer
+              description: The age of the user
+            gender:
+              type: string
+              description: The gender of the user (F, M, X)
+            height:
+              type: number
+              description: The height of the user
+            weight:
+              type: number
+              description: The weight of the user
+            kcal_goal:
+              type: integer
+              description: The daily calorie goal of the user
+            fat_goal:
+              type: integer
+              description: The daily fat goal of the user
+            protein_goal:
+              type: integer
+              description: The daily protein goal of the user
+            carb_goal:
+              type: integer
+              description: The daily carbohydrate goal of the user
+    responses:
+      201:
+        description: User details created successfully
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: User not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     verifivation = verify_identity(user_id, 'You can only create details for yourself')
     if verifivation is not None:
         return verifivation
@@ -58,6 +139,78 @@ def create_user_details(user_id):
 
 @login_required
 def update_user_details(user_id):
+    """
+    Update user details
+    ---
+    tags:
+      - User Details
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+        description: The ID of the user to update details for
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            age:
+              type: integer
+              description: The age of the user
+            gender:
+              type: string
+              description: The gender of the user (F, M, X)
+            height:
+              type: number
+              description: The height of the user
+            weight:
+              type: number
+              description: The weight of the user
+            kcal_goal:
+              type: integer
+              description: The daily calorie goal of the user
+            fat_goal:
+              type: integer
+              description: The daily fat goal of the user
+            protein_goal:
+              type: integer
+              description: The daily protein goal of the user
+            carb_goal:
+              type: integer
+              description: The daily carbohydrate goal of the user
+    responses:
+      200:
+        description: User details updated successfully
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: User or user details not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     verifivation = verify_identity(user_id, 'You can only update details for yourself')
     if verifivation is not None:
         return verifivation
@@ -111,6 +264,65 @@ def update_user_details(user_id):
 
 @login_required
 def get_user_details(user_id):
+    """
+    Get user details
+    ---
+    tags:
+      - User Details
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+        description: The ID of the user to retrieve details for
+    responses:
+      200:
+        description: User details retrieved successfully
+        schema:
+          type: object
+          properties:
+            user_id:
+              type: integer
+            age:
+              type: integer
+            gender:
+              type: string
+            height:
+              type: number
+            weight:
+              type: number
+            kcal_goal:
+              type: integer
+            fat_goal:
+              type: integer
+            protein_goal:
+              type: integer
+            carb_goal:
+              type: integer
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: User or user details not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     verifivation = verify_identity(user_id, 'You can only update details for yourself')
     if verifivation is not None:
         return verifivation

@@ -5,6 +5,84 @@ from endpoints.auth import login_required
 
 @login_required
 def get_ingredients():
+    """
+    Get a list of ingredients
+    ---
+    tags:
+      - Ingredients
+    security:
+      - Bearer: []
+    parameters:
+      - in: query
+        name: limit
+        type: integer
+        description: Number of ingredients to return
+        default: 10
+      - in: query
+        name: page
+        type: integer
+        description: Page number
+        default: 1
+    responses:
+      200:
+        description: A list of ingredients
+        schema:
+          type: object
+          properties:
+            ingredients:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  product_name:
+                    type: string
+                  generic_name:
+                    type: string
+                  kcal_100g:
+                    type: number
+                  protein_100g:
+                    type: number
+                  carbs_100g:
+                    type: number
+                  fat_100g:
+                    type: number
+                  brand:
+                    type: string
+                  barcode:
+                    type: string
+                  image_url:
+                    type: string
+                  labels_tags:
+                    type: string
+                  product_quantity:
+                    type: number
+                  allergens:
+                    type: string
+            total:
+              type: integer
+            pages:
+              type: integer
+            current_page:
+              type: integer
+            page_size:
+              type: integer
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     limit = request.args.get('limit', default=10, type=int)
     page = request.args.get('page', default=1, type=int)
 
@@ -39,6 +117,66 @@ def get_ingredients():
 
 @login_required
 def get_ingredient_by_id(ing_id):
+    """
+    Get an ingredient by ID
+    ---
+    tags:
+      - Ingredients
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: ing_id
+        type: integer
+        required: true
+        description: The ID of the ingredient to retrieve
+    responses:
+      200:
+        description: An ingredient object
+        schema:
+          type: object
+          properties:
+            id:
+              type: integer
+            product_name:
+              type: string
+            generic_name:
+              type: string
+            kcal_100g:
+              type: number
+            protein_100g:
+              type: number
+            carbs_100g:
+              type: number
+            fat_100g:
+              type: number
+            brand:
+              type: string
+            barcode:
+              type: string
+            image_url:
+              type: string
+            labels_tags:
+              type: string
+            product_quantity:
+              type: number
+            allergens:
+              type: string
+      404:
+        description: Ingredient not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
@@ -55,6 +193,66 @@ def get_ingredient_by_id(ing_id):
 
 @login_required
 def search_ingredients():
+    """
+    Search for ingredients
+    ---
+    tags:
+      - Ingredients
+    security:
+      - Bearer: []
+    parameters:
+      - in: query
+        name: query
+        type: string
+        description: The search query
+        default: ''
+      - in: query
+        name: top
+        type: integer
+        description: Number of top results to return
+        default: 10
+    responses:
+      200:
+        description: A list of search results
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              product_name:
+                type: string
+              generic_name:
+                type: string
+              kcal_100g:
+                type: number
+              protein_100g:
+                type: number
+              carbs_100g:
+                type: number
+              fat_100g:
+                type: number
+              brand:
+                type: string
+              barcode:
+                type: string
+              image_url:
+                type: string
+              labels_tags:
+                type: string
+              product_quantity:
+                type: number
+              allergens:
+                type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     query = request.args.get('query', default='', type=str)
     top = request.args.get('top', default=10, type=int)
 

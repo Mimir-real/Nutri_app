@@ -6,6 +6,52 @@ from endpoints.auth import login_required
 
 @login_required
 def create_diet():
+    """
+    Create a new diet
+    ---
+    tags:
+      - Diets
+    security:
+      - Bearer: []
+    parameters:
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+              description: The name of the diet
+            description:
+              type: string
+              description: The description of the diet
+    responses:
+      201:
+        description: Diet created
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+            diet_id:
+              type: integer
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         data = request.get_json()
         name = data.get('name')
@@ -38,6 +84,62 @@ def create_diet():
         return jsonify({"error": str(e)}), 500
 
 def get_diets():
+    """
+    Get a list of diets
+    ---
+    tags:
+      - Diets
+    parameters:
+      - in: query
+        name: limit
+        type: integer
+        description: Number of diets to return
+        default: 10
+      - in: query
+        name: page
+        type: integer
+        description: Page number
+        default: 1
+    responses:
+      200:
+        description: A list of diets
+        schema:
+          type: object
+          properties:
+            diets:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  description:
+                    type: string
+            total:
+              type: integer
+            pages:
+              type: integer
+            current_page:
+              type: integer
+            page_size:
+              type: integer
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         limit = request.args.get('limit', default=10, type=int)
         page = request.args.get('page', default=1, type=int)
@@ -79,6 +181,44 @@ def get_diets():
         return jsonify({"error": str(e)}), 500
 
 def get_diet(diet_id):
+    """
+    Get a diet by ID
+    ---
+    tags:
+      - Diets
+    parameters:
+      - in: path
+        name: diet_id
+        type: integer
+        required: true
+        description: The ID of the diet to retrieve
+    responses:
+      200:
+        description: A diet object
+        schema:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            description:
+              type: string
+      404:
+        description: Diet not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -92,7 +232,7 @@ def get_diet(diet_id):
         if diet:
             return jsonify(diet)
         else:
-            return jsonify({"message": "Diet not specified"}), 404
+            return jsonify({"message": "Diet not found"}), 404
 
     except Exception as e:
         if cursor:
