@@ -7,6 +7,7 @@ import sys
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
 from flask_cors import CORS
 from db_config import get_db_connection, db_create_all
+from flasgger import Swagger
 
 load_dotenv()
 
@@ -14,6 +15,31 @@ load_dotenv()
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')  # Load from environment variable
 jwt = JWTManager(app)
+
+SWAGGER_TEMPLATE = {
+    "swagger": "2.0",
+    "info": {
+        "title": "Nutrition App API",
+        "description": "API documentation",
+        "version": "1.0.0"
+    },
+    "securityDefinitions": {
+        "Bearer": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "description": "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\""
+        }
+    },
+    "security": [
+        {
+            "Bearer": []
+        }
+    ]
+}
+
+swagger = Swagger(app, template=SWAGGER_TEMPLATE)
+
 CORS(app)  # Dodaj tę linię, aby włączyć CORS dla całej aplikacji
 
 @app.cli.command('seed')

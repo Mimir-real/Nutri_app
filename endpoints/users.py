@@ -10,6 +10,45 @@ from endpoints.auth import get_logged_user, login_required, anonymous_required
 
 @login_required
 def get_me():
+    """
+    Get current user
+    ---
+    tags:
+      - Users
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: A user object
+        schema:
+          type: object
+          properties:
+            id:
+              type: integer
+            email:
+              type: string
+            email_confirmed:
+              type: boolean
+            active:
+              type: boolean
+            created_at:
+              type: string
+              format: date-time
+      401:
+        description: Unauthorized
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         user = get_logged_user()
         if isinstance(user, dict) and "error" in user:
@@ -21,6 +60,56 @@ def get_me():
 
 @anonymous_required
 def create_user():
+    """
+    Create a new user
+    ---
+    tags:
+      - Users
+    parameters:
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - email
+            - password
+          properties:
+            email:
+              type: string
+              description: The user's email
+            password:
+              type: string
+              description: The user's password
+    responses:
+      201:
+        description: User created
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+            user_id:
+              type: integer
+            activation_code:
+              type: string
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+            message:
+              type: string
+    security: []
+    """
     try:
         data = request.get_json()
 
@@ -65,6 +154,69 @@ def create_user():
 
 @login_required
 def get_users():
+    """
+    Get a list of users
+    ---
+    tags:
+      - Users
+    security:
+      - Bearer: []
+    parameters:
+      - in: query
+        name: limit
+        type: integer
+        description: Number of users to return
+        default: 10
+      - in: query
+        name: page
+        type: integer
+        description: Page number
+        default: 1
+    responses:
+      200:
+        description: A list of users
+        schema:
+          type: object
+          properties:
+            users:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  email:
+                    type: string
+                  email_confirmed:
+                    type: boolean
+                  active:
+                    type: boolean
+                  created_at:
+                    type: string
+                    format: date-time
+            total:
+              type: integer
+            pages:
+              type: integer
+            current_page:
+              type: integer
+            page_size:
+              type: integer
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         limit = request.args.get('limit', default=10, type=int)
         page = request.args.get('page', default=1, type=int)
@@ -106,6 +258,51 @@ def get_users():
 
 @login_required
 def get_user(user_id):
+    """
+    Get a user by ID
+    ---
+    tags:
+      - Users
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+        description: The ID of the user to retrieve
+    responses:
+      200:
+        description: A user object
+        schema:
+          type: object
+          properties:
+            id:
+              type: integer
+            email:
+              type: string
+            email_confirmed:
+              type: boolean
+            active:
+              type: boolean
+            created_at:
+              type: string
+              format: date-time
+      404:
+        description: User not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -127,6 +324,58 @@ def get_user(user_id):
 
 @anonymous_required
 def activate_user(user_id):
+    """
+    Activate a user
+    ---
+    tags:
+      - Users
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+        description: The ID of the user to activate
+      - in: query
+        name: code
+        type: string
+        required: true
+        description: Activation code
+      - in: query
+        name: email
+        type: string
+        required: true
+        description: User's email
+    responses:
+      200:
+        description: User activated successfully
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: User not found
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    security: []
+    """
     try:
         code = request.args.get('code')
         email = request.args.get('email')
@@ -173,6 +422,73 @@ def activate_user(user_id):
 
 @login_required
 def deactivate_user(user_id):
+    """
+    Deactivate a user
+    ---
+    tags:
+      - Users
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+        description: The ID of the user to deactivate
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - password
+          properties:
+            password:
+              type: string
+              description: The user's password
+    responses:
+      200:
+        description: User deactivated
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      401:
+        description: Unauthorized
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      403:
+        description: Forbidden
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: User not found
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      500:
+        description: Internal server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
     try:
         current_user_id = get_jwt_identity()
         if current_user_id != str(user_id):

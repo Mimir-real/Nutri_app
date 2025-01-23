@@ -8,6 +8,52 @@ from functools import wraps
 import datetime
 
 def login():
+    """
+    User login
+    ---
+    tags:
+      - Auth
+    parameters:
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - email
+            - password
+          properties:
+            email:
+              type: string
+              description: The user's email
+            password:
+              type: string
+              description: The user's password
+    responses:
+      200:
+        description: Login successful
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+            access_token:
+              type: string
+      400:
+        description: Bad request
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      401:
+        description: Unauthorized
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    security: []
+    """
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
@@ -29,6 +75,7 @@ def login():
         return jsonify({"message": "Login successful", "access_token": access_token}), 200
     else:
         return jsonify({"error": "Invalid email or password"}), 401
+
 
 @jwt_required()
 def get_logged_user():
