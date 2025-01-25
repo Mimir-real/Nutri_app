@@ -64,42 +64,48 @@ Aby uruchomić projekt, wymagane są:
 
 6. **Utwórz plik `.env` i skonfiguruj połączenie:**
    
-   ```plaintext
-   DB_NAME=bazaDanych
-   DB_USER=postgres
-   DB_PASSWORD=1234
-   DB_HOST=localhost
-   DB_PORT=5432
-   JWT_SECRET_KEY=secret
-   ```
+    ```plaintext
+    POSTGRES_DB=bazaDanych
+    POSTGRES_USER=postgres
+    POSTGRES_PASSWORD=1234
+    POSTGRES_HOST=localhost
+    POSTGRES_PORT=5432
+    JWT_SECRET_KEY=secret
+    ```
    
 ---
 
-## Uruchomienie
+## Uruchomienie poprzez Docker
 
-1. **Inicjalizacja bazy danych:**
+Aby uruchomić aplikację w kontenerze Docker, wykonaj następujące kroki:
+
+1. **Zainstaluj Dockera**  
+   Jeśli nie masz zainstalowanego Dockera, pobierz i zainstaluj go z [oficjalnej strony](https://www.docker.com/get-started).
+
+2. **Uruchomienie aplikacji**  
+   W terminalu wykonaj następujące polecenia:
 
    ```bash
-   flask db init
-   flask db migrate
-   flask db upgrade
+   docker-compose up
    ```
 
-2. **Zaimportowanie danych:**
-   
+   Aplikacja zostanie uruchomiona w tle.
+
+3. **Sprawdzenie działania**  
+   Po uruchomieniu dokumentacja aplikacja powinna być dostępna pod adresem:
+
    ```bash
-   python3 app.py dbinit
+   http://127.0.0.1:5000/apidocs
    ```
 
-3. **Uruchomienie aplikacji:**
-   
+4. **Zatrzymanie aplikacji**  
+   Aby zatrzymać i usunąć kontenery, wykonaj:
+
    ```bash
-   flask run
+   docker-compose down
    ```
-   
-   Aplikacja będzie dostępna pod adresem: `http://127.0.0.1:5000`
 
----
+--
 
 ## Struktura projektu
 

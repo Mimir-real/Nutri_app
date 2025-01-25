@@ -4,28 +4,22 @@ networks:
 
 services:
   web:
+    build:
+      context: .
+      dockerfile: Dockerfile
     networks:
       - bazy_danych_network
-    build: .
     ports:
       - "5000:5000"
     depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres"]
-      interval: 10s
-      retries: 5
-      start_period: 10s
+      - db
     environment:
-      DB_NAME: bazaDanych
-      DB_USER: postgres
-      DB_PASSWORD: 1234
-      DB_HOST: db
-      DB_PORT: 5432
+      POSTGRES_NAME: bazaDanych
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
       JWT_SECRET_KEY: secret_jwt_key
-    volumes:
-      - .:/app
 
   db:
     networks:
