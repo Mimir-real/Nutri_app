@@ -1,0 +1,52 @@
+networks:
+  bazy_danych_network:
+    driver: bridge
+
+services:
+  web:
+    networks:
+      - bazy_danych_network
+    build: .
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+    environment:
+      DB_NAME: bazaDanych
+      DB_USER: postgres
+      DB_PASSWORD: 1234
+      DB_HOST: db
+      DB_PORT: 5432
+      JWT_SECRET_KEY: secret_jwt_key
+    volumes:
+      - .:/app
+
+  db:
+    networks:
+      - bazy_danych_network
+    image: postgres:alpine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+    environment:
+      POSTGRES_DB: bazaDanych
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/backup.dump:/docker-entrypoint-initdb.d/backup.dump
+    command: >
+      sh -c "docker-entrypoint.sh postgres && pg_restore -U $${POSTGRES_USER} -d $${POSTGRES_DB} /docker-entrypoint-initdb.d/backup.dump"
+
+volumes:
+  pgdata:

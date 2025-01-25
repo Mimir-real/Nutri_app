@@ -13,7 +13,7 @@ load_dotenv()
 
 # Inicjalizacja aplikacji Flask
 app = Flask(__name__)
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')  # Load from environment variable
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'secret')  # Load from environment variable
 jwt = JWTManager(app)
 
 SWAGGER_TEMPLATE = {
@@ -42,29 +42,30 @@ swagger = Swagger(app, template=SWAGGER_TEMPLATE)
 
 CORS(app)  # Dodaj tę linię, aby włączyć CORS dla całej aplikacji
 
-@app.cli.command('seed')
-def seed():
-    seed_base_database()
+# @app.cli.command('seed')
+# def seed():
+#     seed_base_database()
 
-def seed_base_database():
-    with app.app_context():
-        seed_database()
-        pass
+# def seed_base_database():
+#     with app.app_context():
+#         seed_database()
+#         pass
 
-# Funkcja do inicjalizacji bazy danych
-def setup_database():
-    with app.app_context():
-        db_create_all()
-        if 'dbimport' in sys.argv or 'importdb' in sys.argv:
-            print('Importing database, this may take a while')
-            import_database()
-            print('Importing completed')
-        if 'seed' in sys.argv:
-            print('Seeding database with base data')
-            seed_base_database()
-            print('Seeding completed')
-        if 'seed' in sys.argv or 'dbimport' in sys.argv or 'importdb' in sys.argv:
-            exit()
+# # Funkcja do inicjalizacji bazy danych
+# def setup_database():
+#     # with app.app_context():
+#     #     db_create_all()
+#     #     if 'dbimport' in sys.argv or 'importdb' in sys.argv:
+#     #         print('Importing database, this may take a while')
+#     #         import_database()
+#     #         print('Importing completed')
+#     #     if 'seed' in sys.argv:
+#     #         print('Seeding database with base data')
+#     #         seed_base_database()
+#     #         print('Seeding completed')
+#     #     if 'seed' in sys.argv or 'dbimport' in sys.argv or 'importdb' in sys.argv:
+#     #         exit()
+#     pass
 
 # User Endpoints
 from endpoints.users import create_user, get_users, get_user, activate_user, deactivate_user, get_me
@@ -179,7 +180,7 @@ app.add_url_rule('/login', view_func=login, methods=['POST'])
 
 # ==================== URUCHOMIENIE APLIKACJI ====================
 if __name__ == "__main__":
-    setup_database()
+    # setup_database()
     app.run(debug=True)
     
 # ==================== ERROR HANDLERY =============================

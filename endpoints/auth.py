@@ -96,8 +96,20 @@ def login_required(fn, optional_message="You must be logged in to access this re
     @wraps(fn)
     def wrapper(*args, **kwargs):
         try:
-            c = verify_jwt_in_request()
-            print(c)
+            verify_jwt_in_request()
+            user_id = get_jwt_identity()
+            
+            # Sprawdzenie, czy użytkownik jest aktywowany
+            conn = get_db_connection()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute('SELECT active FROM "user" WHERE id = %s', (user_id,))
+            user = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            
+            if not user or not user['active']:
+                return jsonify({"error": "Unauthorized", "message": "User account is not activated"}), 401
+            
             return fn(*args, **kwargs)
         except Exception:
             return jsonify({"error": "Unauthorized", "message": optional_message}), 401

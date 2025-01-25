@@ -5,16 +5,14 @@ from psycopg2.extras import RealDictCursor
 
 load_dotenv()
 
-DB_CONFIG = {
-    'dbname': os.getenv('DB_NAME'),
-    'user': os.getenv('DB_USER'),
-    'password': os.getenv('DB_PASSWORD'),
-    'host': os.getenv('DB_HOST'),
-    'port': os.getenv('DB_PORT')
-}
-
 def get_db_connection():
-    conn = psycopg2.connect(**DB_CONFIG)
+    conn = psycopg2.connect(
+        dbname=os.getenv("POSTGRES_DB", "bazaDanych"),
+        user=os.getenv("POSTGRES_USER", "postgres"),
+        password=os.getenv("POSTGRES_PASSWORD", "1234"),
+        host=os.getenv("POSTGRES_HOST", "db"), #db - nazwa kontenera z bazą danych
+        port=os.getenv("POSTGRES_PORT", 5432)
+    )
     return conn
 
 def db_create_all():
