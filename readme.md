@@ -7,19 +7,13 @@ Aplikacja umożliwia zarządzanie dietami, posiłkami oraz logowaniem żywności
 1. [Wymagania](#wymagania)
 2. [Uruchomienie przez Docker](#uruchomienie-poprzez-docker)
 3. [Struktura projektu](#struktura-projektu)
-4. [Dodawanie danych do bazy](#dodawanie-danych-do-bazy)
-5. [Wykorzystane technologie](#wykorzystane-technologie)
+4. [Wykorzystane technologie](#wykorzystane-technologie)
 
 ---
 
 ## Wymagania
 
-Aby uruchomić projekt, wymagane są:
-
-- **Python 3.7+**
-- **pip** (Python Package Installer)
-- **Virtualenv** (zalecane do izolacji środowiska)
-- **PostgreSQL** (instalacja lokalna lub dostęp do zdalnej bazy)
+- **Docker** (konteneryzacja, uruchomienie)
 
 ---
 
@@ -37,36 +31,46 @@ Aby uruchomić aplikację w kontenerze Docker, wykonaj następujące kroki:
    cd bazany_danych_proj
    ```
 
-3. **Uruchomienie aplikacji**  
+3. **Dostosuj docker-compose.yml (opcjonalne)**
+
+   Jeśli chcesz dostosować konfigurację Docker Compose, możesz edytować plik `docker-compose.yml`. 
+   Na przykład, możesz zmienić porty, zmienne środowiskowe lub inne ustawienia usług.
+
+4. **Uruchomienie aplikacji**  
    W terminalu wykonaj następujące polecenia:
 
    ```bash
    docker-compose up
    ```
 
-   Aplikacja zostanie uruchomiona w tle.
-
-4. **Sprawdzenie działania**  
-   Po uruchomieniu dokumentacja aplikacja powinna być dostępna pod adresem:
+5. **Sprawdzenie działania**  
+   Po uruchomieniu aplikacja powinna być dostępna pod adresem:
 
    ```bash
-   http://127.0.0.1:5000/apidocs
+   http://127.0.0.1:5000/
    ```
 
-5. **Zatrzymanie aplikacji**  
+   Dokumentacja będzie dostępna pod adresem
+
+   ```bash
+   http://127.0.0.1:5000/apidocs/
+   ```
+
+6. **Zatrzymanie aplikacji**  
    Aby zatrzymać i usunąć kontenery, wykonaj:
 
    ```bash
    docker-compose down
    ```
 
---
+---
 
 ## Struktura projektu
 
 ```
 diet-app/
 ├── app.py                # Główny plik aplikacji Flask
+├── endpoints/            # Endpointy aplikacji
 ├── db_config.py          # Konfiguracja bazy danych
 ├── requirements.txt      # Plik z zależnościami
 └── README.md             # Dokumentacja projektu
