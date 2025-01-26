@@ -78,16 +78,488 @@ Weryfikuje, czy zalogowany użytkownik jest właścicielem określonych zasobów
 **Działanie:**
 Jeśli `user_id` nie jest zgodne z tożsamością użytkownika z tokena JWT, funkcja zwraca odpowiedź unauthorized:
 
+---
+
+## endpoints/user_details.py  
+Funkcja odpowiedzialna za tworzenie szczegółowych danych użytkownika.  
+
+- Wymagana autoryzacja za pomocą tokena JWT.  
+- Zapewnia weryfikację tożsamości, aby użytkownicy mogli tworzyć szczegóły tylko dla siebie.  
+- Walidacja danych wejściowych oraz odpowiednie komunikaty zwrotne w przypadku błędów.  
+
+---
+
+### `create_user_details(user_id)`  
+Tworzy szczegóły użytkownika dla określonego `user_id`.
+
+**Endpoint:**  
+`POST /user/{user_id}/details`
+
+**Parametry wejściowe:**  
+- `user_id` (integer) – ID użytkownika (parametr ścieżki, wymagany).  
+- Dane w formacie JSON w ciele żądania:  
+
+| Pole             | Typ     | Opis                                           |
+|-------------------|---------|------------------------------------------------|
+| `age`            | integer | Wiek użytkownika (wymagane).                   |
+| `gender`         | string  | Płeć użytkownika: `F`, `M`, `X` (wymagane).    |
+| `height`         | number  | Wzrost użytkownika (wymagane).                 |
+| `weight`         | number  | Waga użytkownika (wymagane).                   |
+| `kcal_goal`      | integer | Dzienny cel kaloryczny użytkownika (wymagane). |
+| `fat_goal`       | integer | Dzienny cel tłuszczu (w gramach, wymagane).    |
+| `protein_goal`   | integer | Dzienny cel białka (w gramach, wymagane).      |
+| `carb_goal`      | integer | Dzienny cel węglowodanów (w gramach, wymagane).|
+
+**Walidacja:**  
+- Weryfikacja, czy użytkownik istnieje oraz czy szczegóły użytkownika już nie istnieją.  
+- Walidacja płci (`gender`) – akceptowane wartości: `F`, `M`, `X`.  
+- Sprawdzenie, czy wszystkie wartości liczbowe są większe lub równe 0.  
+
+**Odpowiedzi:**  
+- **201:** Szczegóły użytkownika utworzone pomyślnie.  
+  ```json
+  {
+    "message": "User details created successfully"
+  }
+  ```
+- **400:** Błąd walidacji – np. brakujące dane, nieprawidłowa płeć, szczegóły użytkownika już istnieją.  
+  ```json
+  {
+    "error": "User details already exist"
+  }
+  ```
+- **404:** Użytkownik o podanym `user_id` nie istnieje.  
+  ```json
+  {
+    "message": "User not found"
+  }
+  ```
+- **500:** Wewnętrzny błąd serwera.  
+  ```json
+  {
+    "error": "Internal server error"
+  }
+  ```
+
+---
+
+### Działanie funkcji  
+1. **Weryfikacja tożsamości:** Funkcja sprawdza, czy użytkownik jest autoryzowany do utworzenia szczegółów tylko dla swojego konta.  
+2. **Walidacja wejścia:** Weryfikowane są wartości pól JSON oraz `user_id`.  
+3. **Operacje na bazie danych:**  
+   - Sprawdzenie istnienia użytkownika w tabeli `user`.  
+   - Sprawdzenie, czy szczegóły użytkownika już istnieją w tabeli `user_details`.  
+   - Dodanie nowych szczegółów do tabeli `user_details`.  
+4. **Zwracanie odpowiedzi:** Funkcja zwraca odpowiedni status oraz komunikat w zależności od wyniku operacji.
+
+---
 
 
+### `update_user_details(user_id)`
+Obsługuje aktualizację szczegółów użytkownika w systemie. Aktualizuje dane osobowe oraz cele żywieniowe w bazie danych.
+
+**Endpoint:**
+`PUT /user_details/<user_id>`
+
+**Parametry wejściowe:**
+- `user_id` (integer) – ID użytkownika, którego dane mają zostać zaktualizowane (parametr ścieżki, wymagany).
+
+Przyjmuje dane w formacie JSON w ciele żądania:
+- `age` (integer) – Wiek użytkownika (opcjonalne).
+- `gender` (string) – Płeć użytkownika (opcjonalne; dozwolone wartości: `F`, `M`, `X`).
+- `height` (number) – Wzrost użytkownika (opcjonalne).
+- `weight` (number) – Waga użytkownika (opcjonalne).
+- `kcal_goal` (integer) – Dzienny cel kaloryczny użytkownika (opcjonalne).
+- `fat_goal` (integer) – Dzienny cel spożycia tłuszczu (opcjonalne).
+- `protein_goal` (integer) – Dzienny cel spożycia białka (opcjonalne).
+- `carb_goal` (integer) – Dzienny cel spożycia węglowodanów (opcjonalne).
+
+**Odpowiedzi:**
+- **200:** Aktualizacja zakończona sukcesem. Zwracany jest komunikat o powodzeniu.
+  ```json
+  {
+    "message": "User details updated successfully"
+  }
+  ```
+- **400:** Nieprawidłowe żądanie – brakujące dane lub nieprawidłowe wartości.
+  ```json
+  {
+    "error": "Invalid gender value"
+  }
+  ```
+- **404:** Nie znaleziono użytkownika lub szczegółów użytkownika.
+  ```json
+  {
+    "message": "User details not found"
+  }
+  ```
+- **500:** Wewnętrzny błąd serwera.
+  ```json
+  {
+    "error": "Internal server error"
+  }
+  ```
+
+**Działanie:**
+1. Weryfikacja tożsamości użytkownika za pomocą funkcji `verify_identity`.
+2. Pobranie danych z żądania i walidacja wartości (np. sprawdzenie płci, czy wartości są dodatnie).
+3. Sprawdzenie, czy użytkownik i jego szczegóły istnieją w bazie danych.
+4. Aktualizacja szczegółów użytkownika w tabeli `user_details`.
+5. Zwrócenie odpowiedniej odpowiedzi w zależności od wyniku operacji.
+
+---
 
 
+### `get_user_details(user_id)`  
+Pobiera szczegóły użytkownika dla określonego `user_id`.
 
+**Endpoint:**  
+`GET /user/{user_id}/details`
 
+**Parametry wejściowe:**  
+- `user_id` (integer) – ID użytkownika (parametr ścieżki, wymagany).  
 
+**Walidacja:**  
+- Weryfikacja, czy użytkownik istnieje.  
+- Sprawdzenie, czy szczegóły użytkownika istnieją w bazie danych.  
 
+**Odpowiedzi:**  
+- **200:** Szczegóły użytkownika pobrane pomyślnie.  
+  ```json
+  {
+    "user_id": 1,
+    "age": 25,
+    "gender": "M",
+    "height": 180.5,
+    "weight": 75.0,
+    "kcal_goal": 2000,
+    "fat_goal": 70,
+    "protein_goal": 150,
+    "carb_goal": 250
+  }
+- **400** błąd walidacji, np. brakujące user_id. 
+- **404** brak użytkownika o podanym user_id.
+- **500** wewnętrzny błąd serwera
 
+---
+## endpoints/user_diets.py  
+Funkcja odpowiedzialna za przypisywanie diety do użytkownika.  
 
+- Wymagana autoryzacja za pomocą tokena JWT.  
+- Zapewnia weryfikację tożsamości, aby użytkownicy mogli przypisywać diety tylko dla siebie.  
+- Walidacja danych wejściowych oraz odpowiednie komunikaty zwrotne w przypadku błędów.  
+
+---
+
+### `assign_diet_to_user(user_id)`  
+Przypisuje dietę do użytkownika o określonym `user_id`.
+
+**Endpoint:**  
+`POST /user/{user_id}/diets`
+
+**Parametry wejściowe:**  
+- `user_id` (integer) – ID użytkownika (parametr ścieżki, wymagany).  
+- Dane w formacie JSON w ciele żądania:  
+
+| Pole        | Typ      | Opis                                                                 |
+|-------------|----------|----------------------------------------------------------------------|
+| `diet_id`   | integer  | ID diety do przypisania (wymagane).                                  |
+| `allowed`   | boolean  | Określa, czy dieta jest dozwona dla użytkownika (domyślnie: `true`). |
+
+**Walidacja:**  
+- Sprawdzenie istnienia użytkownika i diety w bazie danych.  
+- Weryfikacja, czy dieta nie jest już przypisana do użytkownika.  
+- Walidacja wymaganych pól (`diet_id`).  
+
+**Odpowiedzi:**  
+
+- **201:** Dieta przypisana pomyślnie.  
+  ```json
+  {
+    "message": "Diet assigned to user"
+  }
+  ```
+  
+- **400:** Błąd walidacji np. brakujące diet_id.
+  ```json
+  {
+    "error": "diet_id is required"
+  }  
+  ```
+
+  - **404:** Użytkownik nie istnieje.
+  ```json
+  {
+    "message": "User not found"
+  }
+  ```
+
+    - **500:** Wewnętrzny błąd serwera.
+  ```json
+  {
+    "error": "Internal server error"
+  }
+  ```
+
+  ---
+### `remove_diet_from_user(user_id, diet_id)`  
+Usuwa przypisaną dietę użytkownikowi o określonym `user_id`.
+
+**Endpoint:**  
+`DELETE /user/{user_id}/diets/{diet_id}`
+
+**Parametry wejściowe:**  
+- `user_id` (integer) – ID użytkownika (parametr ścieżki, wymagany).  
+- `diet_id` (integer) – ID diety do usunięcia (parametr ścieżki, wymagany).  
+
+**Walidacja:**  
+- Sprawdzenie, czy dieta jest przypisana do użytkownika w tabeli `user_diets`.  
+
+**Odpowiedzi:**  
+- **200:** Dieta usunięta pomyślnie.  
+  ```json
+  {
+    "message": "Diet removed from user"
+  }
+  ```
+  ---
+  
+### `get_user_diets(user_id)`  
+Pobiera listę diet przypisanych do użytkownika o określonym `user_id`.
+
+**Endpoint:**  
+`GET /user/{user_id}/diets`
+
+**Parametry wejściowe:**  
+- `user_id` (integer) – ID użytkownika (parametr ścieżki, wymagany).  
+
+**Walidacja:**  
+- Weryfikacja autoryzacji użytkownika.  
+
+**Odpowiedzi:**  
+- **200:** Pomyślnie zwrócono listę diet użytkownika.  
+  ```json
+  [
+    {
+      "user_id": 1,
+      "diet_id": 5,
+      "allowed": true
+    },
+    {
+      "user_id": 1,
+      "diet_id": 8,
+      "allowed": false
+    }
+  ]
+  ```
+
+  ---
+
+  ## endpoints/users.py
+  Funkcje odpowiedzialne za pobieranie obecnie zalogowanego użytkownika (siebie), tworzenie użytkonwika, pobieranie listy określonej liczby użytkowników, pobieranie konkretnego użytkownika, aktywację konta użytkownika, deaktywację użytkownika
+
+  ---
+
+### `get_me()`  
+Pobiera informacje o aktualnie zalogowanym użytkowniku.
+
+**Endpoint:**  
+`GET /users/me`
+
+**Parametry wejściowe:**  
+*Brak parametrów ścieżki lub zapytania.*  
+
+**Walidacja:**  
+- Automatyczna weryfikacja tokena JWT przez dekorator `@login_required`.  
+
+**Odpowiedzi:**  
+- **200:** Pomyślnie zwrócono dane użytkownika.  
+  ```json
+  {
+    "id": 1,
+    "email": "user@example.com",
+    "email_confirmed": true,
+    "active": true,
+    "created_at": "2023-01-01T12:00:00Z"
+  }
+  ```
+- **401:** Brak autoryzacji
+  ```json
+  {
+  "error": "Unauthorized"
+  }
+  ```
+- **403:** Błąd dostępu
+  ```json
+  {
+  "error": "Access denied"
+  }
+  ```
+- **500:** Wewnętrzny błąd serwera
+  ```json
+  {
+  "error": "Unauthorized"
+  }
+  ```
+  ---
+  
+### `create_user()`  
+Tworzy nowego użytkownika w systemie.
+
+**Endpoint:**  
+`POST /users`
+
+**Parametry wejściowe:**  
+- Dane w formacie JSON w ciele żądania:  
+
+| Pole                 | Typ      | Opis                                     |
+|-----------------------|----------|------------------------------------------|
+| `email`              | string   | Adres email użytkownika (wymagane).      |
+| `password`           | string   | Hasło użytkownika (wymagane).            |
+| `confirm_password`   | string   | Potwierdzenie hasła (wymagane).          |
+
+**Walidacja:**  
+- Wszystkie pola muszą być podane.  
+- Hasło i potwierdzenie hasła muszą być identyczne.  
+- Email musi być unikalny (nie może istnieć w bazie).  
+
+**Odpowiedzi:**  
+- **201:** Użytkownik utworzony pomyślnie.  
+  ```json
+  {
+    "message": "User created",
+    "user_id": 5,
+    "activation_code": "a1b2c3d4-e5f6-7890-g1h2-i3j4k5l6m7n8"
+  }
+  ```
+
+  ---
+
+  ### `get_users()`  
+Pobiera listę użytkowników z możliwością stronicowania.
+
+**Endpoint:**  
+`GET /users`
+
+**Parametry wejściowe (query):**  
+| Pole       | Typ      | Opis                                      | Domyślna wartość |
+|------------|----------|-------------------------------------------|------------------|
+| `limit`    | integer  | Liczba użytkowników na stronie.           | 10               |
+| `page`     | integer  | Numer strony.                             | 1                |
+
+**Walidacja:**  
+- `limit` i `page` muszą być liczbami całkowitymi większymi od 0.  
+
+**Odpowiedzi:**  
+- **200:** Pomyślnie zwrócono listę użytkowników.  
+  ```json
+  {
+    "users": [
+      {
+        "id": 1,
+        "email": "user1@example.com",
+        "email_confirmed": true,
+        "active": true,
+        "created_at": "2023-01-01T12:00:00Z"
+      },
+      {
+        "id": 2,
+        "email": "user2@example.com",
+        "email_confirmed": false,
+        "active": false,
+        "created_at": "2023-01-02T12:00:00Z"
+      }
+    ],
+    "total": 50,
+    "pages": 5,
+    "current_page": 1,
+    "page_size": 10
+  }
+  ```
+
+  ---
+
+### `get_user(user_id)`  
+Pobiera szczegóły konta użytkownika o określonym `user_id`.
+
+**Endpoint:**  
+`GET /users/{user_id}`
+
+**Parametry wejściowe:**  
+- `user_id` (integer) – ID użytkownika (parametr ścieżki, wymagany).  
+
+**Walidacja:**  
+- Sprawdzenie istnienia użytkownika w bazie danych.  
+
+**Odpowiedzi:**  
+- **200:** Pomyślnie zwrócono dane użytkownika.  
+  ```json
+  {
+    "id": 1,
+    "email": "user@example.com",
+    "email_confirmed": true,
+    "active": true,
+    "created_at": "2023-01-01T12:00:00Z"
+  }
+  ```
+
+  ---
+
+  ### `activate_user(user_id)`  
+Aktywuje konto użytkownika na podstawie kodu weryfikacyjnego.
+
+**Endpoint:**  
+`GET /users/{user_id}/activate`
+
+**Parametry wejściowe:**  
+| Typ parametru | Pole       | Typ      | Opis                                     | Wymagane? |
+|---------------|------------|----------|------------------------------------------|-----------|
+| **Path**      | `user_id`  | integer  | ID użytkownika do aktywacji.             | Tak       |
+| **Query**     | `code`     | string   | Kod aktywacyjny z linku weryfikacyjnego. | Tak       |
+| **Query**     | `email`    | string   | Email użytkownika powiązany z kontem.    | Tak       |
+
+**Walidacja:**  
+- Wymagane są parametry `code` i `email`.  
+- Użytkownik musi istnieć w tabeli `user`.  
+- Email musi zgadzać się z emailem przypisanym do `user_id`.  
+- Kod musi być ważny i nieużyty (tabela `links` z typem `activate`).  
+
+**Odpowiedzi:**  
+- **200:** Konto aktywowane pomyślnie.  
+  ```json
+  {
+    "message": "User activated successfully"
+  }
+  ```
+
+  ---
+
+### `deactivate_user(user_id)`  
+Dezaktywuje konto użytkownika o określonym `user_id`.
+
+**Endpoint:**  
+`POST /users/{user_id}/deactivate`
+
+**Parametry wejściowe:**  
+- `user_id` (integer) – ID użytkownika (parametr ścieżki, wymagany).  
+- Dane w formacie JSON w ciele żądania:  
+
+| Pole        | Typ      | Opis                                     |
+|-------------|----------|------------------------------------------|
+| `password`  | string   | Hasło użytkownika (wymagane).            |
+
+**Walidacja:**  
+- Użytkownik musi być właścicielem konta (`user_id` musi pasować do tokena JWT).  
+- Hasło musi być poprawne i zgodne z zapisanym w bazie.  
+
+**Odpowiedzi:**  
+- **200:** Konto dezaktywowane pomyślnie.  
+  ```json
+  {
+    "message": "User deactivated"
+  }
+  ```
+ --- 
 
 
 
