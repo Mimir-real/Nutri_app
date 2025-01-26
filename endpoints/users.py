@@ -73,6 +73,7 @@ def create_user():
           required:
             - email
             - password
+            - confirm_password
           properties:
             email:
               type: string
@@ -80,6 +81,9 @@ def create_user():
             password:
               type: string
               description: The user's password
+            confirm_password:
+              type: string
+              description: The user's password confirmation
     responses:
       201:
         description: User created
@@ -113,11 +117,19 @@ def create_user():
     try:
         data = request.get_json()
 
-        if not data.get('email') or not data.get('password'):
-            raise ValueError("Email and password are required")
+        if not data.get('email') or not data.get('password') or not data.get('confirm_password'):
+            raise ValueError("Email, password, and password confirmation are required")
+
+        if data['password'] != data['confirm_password']:
+            raise ValueError("Passwords do not match")
 
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Check if email is unique
+        cursor.execute('SELECT id FROM "user" WHERE email = %s', (data['email'],))
+        if cursor.fetchone():
+            raise ValueError("Email already exists")
 
         hashed_password = generate_password_hash(data['password'])
 
@@ -139,7 +151,7 @@ def create_user():
         cursor.close()
         conn.close()
 
-        return jsonify({"message": "User created", "user_id": new_user_id, "activation_code (wyświetlane dla celów prezentacyjnych)": activation_code}), 201
+        return jsonify({"message": "User created", "user_id": new_user_id, "activation_code": activation_code}), 201
 
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
