@@ -7,6 +7,7 @@ from psycopg2 import sql
 from psycopg2.extras import RealDictCursor
 from werkzeug.security import generate_password_hash, check_password_hash
 from endpoints.auth import get_logged_user, login_required, anonymous_required
+import datetime
 
 @login_required
 def get_me():
@@ -141,11 +142,12 @@ def create_user():
         new_user_id = cursor.fetchone()['id']
 
         activation_code = str(uuid.uuid4())
+        expire_at = datetime.datetime.now() + datetime.timedelta(hours=24)
 
         cursor.execute('''
-            INSERT INTO links (user_id, code, type_id, used)
-            VALUES (%s, %s, %s, %s)
-        ''', (new_user_id, activation_code, 1, False))
+            INSERT INTO links (user_id, code, type_id, used, expire_at)
+            VALUES (%s, %s, (SELECT id FROM link_types WHERE type = 'activate'), %s, %s)
+        ''', (new_user_id, activation_code, False, expire_at))
 
         conn.commit()
         cursor.close()
@@ -410,13 +412,26 @@ def activate_user(user_id):
             conn.close()
             return jsonify({"error": "Email does not match"}), 400
 
-        cursor.execute('SELECT id FROM links WHERE user_id = %s AND code = %s', (user_id, code))
+        cursor.execute('''
+            SELECT links.id, links.expire_at, links.type_id
+            FROM links
+            JOIN link_types ON links.type_id = link_types.id
+            WHERE links.user_id = %s AND links.code = %s AND link_types.type = 'activate'
+        ''', (user_id, code))
         link = cursor.fetchone()
 
         if not link:
             cursor.close()
             conn.close()
             return jsonify({"error": "Invalid code"}), 400
+
+        if link['expire_at'] and link['expire_at'] < datetime.datetime.now():
+            cursor.execute('DELETE FROM links WHERE id = %s', (link['id'],))
+            cursor.execute('DELETE FROM "user" WHERE id = %s', (user_id,))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return jsonify({"error": "Link expired and user deleted"}), 400
 
         cursor.execute('UPDATE "user" SET active = %s, email_confirmed = %s WHERE id = %s', (True, True, user_id))
         cursor.execute('DELETE FROM links WHERE id = %s', (link['id'],))
@@ -431,7 +446,7 @@ def activate_user(user_id):
         if conn:
             conn.close()
         return jsonify({"error": str(e)}), 500
-
+    
 @login_required
 def deactivate_user(user_id):
     """
