@@ -6,7 +6,7 @@ import psycopg2
 from psycopg2 import sql
 from psycopg2.extras import RealDictCursor
 from werkzeug.security import generate_password_hash, check_password_hash
-from endpoints.auth import get_logged_user, login_required, anonymous_required
+from endpoints.auth import get_logged_user, login_required, anonymous_required, verify_identity
 import datetime
 
 @login_required
@@ -517,9 +517,9 @@ def deactivate_user(user_id):
               type: string
     """
     try:
-        current_user_id = get_jwt_identity()
-        if current_user_id != str(user_id):
-            return jsonify({"error": "Unauthorized"}), 403
+        verifivation = verify_identity(user_id, 'You can only deactivate yourself')
+        if verifivation is not None:
+            return verifivation
 
         data = request.get_json()
         password = data.get('password')
