@@ -56,7 +56,7 @@
 
 ## Tablice użytkowe
 
-    Tablice użytkowe, (do uzupelnienia)
+   Tablice użytkowe przechowują informacje specyficzne dla użytkowników, takie jak dane logowania, preferencje dietetyczne, zaplanowane posiłki i zjedzone posiłki.
 
 ### Users
 
@@ -74,6 +74,10 @@
    3. Dezaktywowanego użytkownika (ID=18) - został zarejestrowany oraz dezaktywowany (przeznaczony do usunięcia w przyszłości)
       - Login: `dezaktywowany@user.pl`
       - Haslo: `trudne_haslo`
+
+   4. Drugiego aktywnego użykownika (ID=14) z potwierdzonym emailem:
+      - Login: `normalny2@user.pl`
+      - Hasło: `trudne_haslo`
 
 ### Links
 
@@ -94,7 +98,7 @@
    SELECT * FROM user_details;
     user_id | age | gender | height | weight | kcal_goal | fat_goal | protein_goal | carb_goal 
    ---------+-----+--------+--------+--------+-----------+----------+--------------+-----------
-         14 |  21 | X      |  184.3 |   83.6 |      2100 |       50 |           70 |       400
+         19 |  21 | X      |  184.3 |   83.6 |      2100 |       50 |           70 |       400
    ```
 
 ### User_diets
@@ -118,18 +122,18 @@
 
    Baza przed aktualizacją:
    ```bash
-   SELECT * FROM meal WHERE id = 14;
-    id |       name       | description | creator_id | diet_id | category_id | version |        last_update         
-   ----+------------------+-------------+------------+---------+-------------+---------+----------------------------
-    14 | Płatki z mlekiem |             |         14 |       1 |           1 |       1 | 2025-01-26 16:38:00.094739
+   SELECT * FROM meal WHERE id = 27;
+    id |       name       |  description   | creator_id | diet_id | category_id | version |        last_update         
+   ----+------------------+----------------+------------+---------+-------------+---------+----------------------------
+    27 | Płatki z mlekiem | Najpierw mleko |         14 |       1 |           1 |       1 | 2025-01-26T18:51:00.563404
    ```
 
    Baza po aktualizacji:
    ```bash
-   SELECT * FROM meal WHERE id = 14;
-    id |       name       |  description   | creator_id | diet_id | category_id | version |        last_update        
-   ----+------------------+----------------+------------+---------+-------------+---------+---------------------------
-    14 | Mleko z płatkami | Najpierw mleko |         14 |       1 |           1 |       2 | 2025-01-26 16:38:56.21142
+   SELECT * FROM meal WHERE id = 27;
+    id |       name       |  description   | creator_id | diet_id | category_id | version |        last_update         
+   ----+------------------+----------------+------------+---------+-------------+---------+----------------------------
+    27 | Płatki z mlekiem | Najpierw mleko |         14 |       1 |           1 |       2 | 2025-01-26 18:51:26.939319
    ```
 
    Pełny aktualny stan bazy:
@@ -137,52 +141,68 @@
    SELECT * FROM meal;
     id |       name       |  description   | creator_id | diet_id | category_id | version |        last_update         
    ----+------------------+----------------+------------+---------+-------------+---------+----------------------------
-    14 | Mleko z płatkami | Najpierw mleko |         14 |       1 |           1 |       2 | 2025-01-26 16:38:56.21142
-    16 | Coś Wege         | Ujdzie         |         14 |       3 |           4 |       1 | 2025-01-26 17:01:57.300402
-    17 | Mielone z ryżem  | Spoko obiad    |         18 |       1 |           3 |       1 | 2025-01-26 17:04:23.282463
+    27 | Płatki z mlekiem | Najpierw mleko |         14 |       1 |           1 |       2 | 2025-01-26 18:51:26.939319
+    28 | Coś Wege         |                |         14 |       3 |           4 |       1 | 2025-01-26 18:51:39.404197
+    29 | Mielone z ryżem  | Spoko obiad    |         19 |       1 |           3 |       1 | 2025-01-26 18:55:18.678454
    ```
 
 ### Meal_ingredients
 
-   Tabela `meal_ingredients` zawiera ...
+   Tabela `meal_ingredients` zawiera składniki przypisane do posiłków, w tym ich jednostki miary oraz ilości.
 
    ```bash
    SELECT * FROM meal_ingredients;
     id | meal_id | ingredient_id | unit | quantity 
    ----+---------+---------------+------+----------
-    23 |      14 |        114368 | g    |      100
-    24 |      14 |       1072345 | g    |      250
-    27 |      16 |           180 | g    |      150
-    28 |      17 |       1030437 | g    |      500
-    29 |      17 |       1283820 | g    |     1000
+    48 |      27 |       1033381 | g    |      250
+    49 |      27 |        114368 | g    |      100
+    50 |      28 |          8062 | g    |      200
+    51 |      29 |       1030437 | g    |      500
+    52 |      29 |       1283820 | g    |      250
    ```
 
 ### Meal_history
 
-   Tabela `meal_history` zawiera ...
+   Tabela `meal_history` przechowuje historię zmian posiłków, w tym ich skład oraz wersje.
 
+   
    ```bash
    SELECT * FROM meal_history;
-    id |                                                                                                             composition                                                                                                              | meal_id | meal_version 
-   ----+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+--------------
-    32 | {"name": "P\u0142atki z mlekiem", "diet_id": 1, "category_id": 1, "ingredients": [{"ingredient_id": 114368, "unit": "g", "quantity": 100}, {"ingredient_id": 1072345, "unit": "g", "quantity": 250}]}                                |      14 |            1
-    33 | {"id": 14, "name": "P\u0142atki z mlekiem", "description": "", "creator_id": 14, "diet_id": 1, "category_id": 1, "version": 1, "last_update": "2025-01-26T16:38:00.094739"}                                                          |      14 |            1
-    35 | {"name": "Co\u015b Wege", "description": "Ujdzie", "diet_id": 3, "category_id": 4, "ingredients": [{"ingredient_id": 180, "unit": "g", "quantity": 150}]}                                                                            |      16 |            1
-    36 | {"name": "Mielone z ry\u017cem", "description": "Spoko obiad", "diet_id": 1, "category_id": 3, "ingredients": [{"ingredient_id": 1030437, "unit": "g", "quantity": 500}, {"ingredient_id": 1283820, "unit": "g", "quantity": 1000}]} |      17 |            1
+    id |                                                                                                                  composition                                                                                                                   | meal_id | meal_version 
+   ----+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+--------------
+    60 | {"meal": {"diet_id": 1, "category_id": 1, "last_update": "2025-01-26T18:51:00.563404", "version": 1}, "ingredients": [{"ingredient_id": 114368, "unit": "g", "quantity": 150.0}, {"ingredient_id": 1033381, "unit": "g", "quantity": 300.0}]}  |      27 |            1
+    61 | {"meal": {"diet_id": 1, "category_id": 1, "last_update": "2025-01-26T18:51:26.939319", "version": 2}, "ingredients": [{"ingredient_id": 114368, "unit": "g", "quantity": 100.0}, {"ingredient_id": 1033381, "unit": "g", "quantity": 250.0}]}  |      27 |            2
+    62 | {"meal": {"diet_id": 3, "category_id": 4, "last_update": "2025-01-26T18:51:39.404197", "version": 1}, "ingredients": [{"ingredient_id": 8062, "unit": "g", "quantity": 200.0}]}                                                                |      28 |            1
+    63 | {"meal": {"diet_id": 1, "category_id": 3, "last_update": "2025-01-26T18:55:18.678454", "version": 1}, "ingredients": [{"ingredient_id": 1030437, "unit": "g", "quantity": 500.0}, {"ingredient_id": 1283820, "unit": "g", "quantity": 250.0}]} |      29 |            1
    ```
 
 ### Food_schedule
 
-   Tabela `food_schedule` zawiera ... 
+   Tabela `food_schedule` przechowuje zaplanowane posiłki użytkowników, w tym identyfikator historii posiłku, datę i godzinę oraz identyfikator użytkownika.
 
    ```bash
-
+   SELECT * FROM food_schedule;
+    id | meal_history_id |         at          | user_id 
+   ----+-----------------+---------------------+---------
+    21 |              60 | 2025-02-01 20:00:00 |      19
+    22 |              60 | 2025-02-02 20:00:00 |      19
+    24 |              61 | 2025-02-02 08:00:00 |      19
+    25 |              63 | 2025-02-03 19:00:00 |      19
+    26 |              62 | 2025-02-05 19:00:00 |      19
    ```
 
 ### Food_Log
 
-   Tabela `food_log` zawiera ... 
+   Tabela `food_log` przechowuje zjedzone posiłki użytkowników, w tym identyfikator historii posiłku, porcję, datę i godzinę oraz identyfikator użytkownika.
 
    ```bash
-
+   SELECT * FROM food_log;
+    id | meal_history_id | portion |         at          | user_id 
+   ----+-----------------+---------+---------------------+---------
+    14 |              61 |     300 | 2025-01-20 01:49:06 |      19
+    15 |              63 |     200 | 2025-01-20 22:18:06 |      19
+    16 |              62 |     500 | 2025-01-21 19:24:28 |      19
+    17 |              60 |     500 | 2025-01-23 10:10:12 |      19
    ```
+
+   
