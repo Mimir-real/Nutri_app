@@ -207,6 +207,11 @@ def search_ingredients():
         description: The search query
         default: ''
       - in: query
+        name: barcode
+        type: string
+        description: The barcode to search for
+        default: ''
+      - in: query
         name: top
         type: integer
         description: Number of top results to return
@@ -254,17 +259,26 @@ def search_ingredients():
               type: string
     """
     query = request.args.get('query', default='', type=str)
+    barcode = request.args.get('barcode', default='', type=str)
     top = request.args.get('top', default=10, type=int)
 
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-    cursor.execute('''
-        SELECT * FROM ingredients
-        WHERE to_tsvector('english', product_name || ' ' || generic_name) @@ plainto_tsquery('english', %s)
-        AND product_quantity IS NOT NULL
-        LIMIT %s
-    ''', (query, top))
+    if barcode:
+        cursor.execute('''
+            SELECT * FROM ingredients
+            WHERE barcode = %s
+            LIMIT %s
+        ''', (barcode, top))
+    else:
+        cursor.execute('''
+            SELECT * FROM ingredients
+            WHERE to_tsvector('english', product_name || ' ' || generic_name) @@ plainto_tsquery('english', %s)
+            AND product_quantity IS NOT NULL
+            LIMIT %s
+        ''', (query, top))
+    
     results = cursor.fetchall()
 
     cursor.close()
