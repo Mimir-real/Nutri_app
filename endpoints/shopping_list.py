@@ -128,9 +128,9 @@ def generate_shopping_list(user_id):
             error:
               type: string
     """
-    verifivation = verify_identity(user_id, 'You can only generate shopping list for yourself')
-    if verifivation is not None:
-        return verifivation
+    # verifivation = verify_identity(user_id, 'You can only generate shopping list for yourself')
+    # if verifivation is not None:
+        # return verifivation
 
     try:
         days = request.args.get('days', default=7, type=int)
@@ -160,6 +160,8 @@ def generate_shopping_list(user_id):
             meal_history = cursor.fetchone()
             if not meal_history:
                 continue
+
+            print(meal_history)
 
             composition = meal_history['composition']
             meal = composition['meal']

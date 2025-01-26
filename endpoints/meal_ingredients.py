@@ -3,8 +3,8 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from db_config import get_db_connection
 from endpoints.auth import login_required, verify_identity
-import json
 import datetime
+from endpoints.meal_history import create_meal_history
 
 @login_required
 def get_meal_ingredients(meal_id):
@@ -221,14 +221,6 @@ def replace_meal_ingredients(meal_id):
             conn.close()
             return verifivation
 
-        # Convert datetime objects to strings
-        meal['last_update'] = meal['last_update'].isoformat() if meal['last_update'] else None
-
-        cursor.execute('''
-            INSERT INTO meal_history (meal_id, meal_version, composition)
-            VALUES (%s, %s, %s)
-        ''', (meal_id, meal['version'], json.dumps(dict(meal))))
-
         cursor.execute('DELETE FROM meal_ingredients WHERE meal_id = %s', (meal_id,))
 
         for ingredient_data in ingredients:
@@ -239,17 +231,11 @@ def replace_meal_ingredients(meal_id):
 
         cursor.execute('''
             UPDATE meal
-            SET version = version + 1
+            SET version = version + 1, last_update = %s
             WHERE id = %s
-        ''', (meal_id,))
+        ''', (datetime.datetime.utcnow().isoformat(), meal_id))
 
-        # Convert datetime objects to strings in the new data
-        data['last_update'] = datetime.datetime.utcnow().isoformat()
-
-        cursor.execute('''
-            INSERT INTO meal_history (meal_id, meal_version, composition)
-            VALUES (%s, %s, %s)
-        ''', (meal_id, meal['version'] + 1, json.dumps(data)))
+        create_meal_history(cursor, meal_id)
 
         conn.commit()
         cursor.close()
@@ -348,14 +334,6 @@ def add_meal_ingredient(meal_id):
             conn.close()
             return verifivation
 
-        # Convert datetime objects to strings
-        meal['last_update'] = meal['last_update'].isoformat() if meal['last_update'] else None
-
-        cursor.execute('''
-            INSERT INTO meal_history (meal_id, meal_version, composition)
-            VALUES (%s, %s, %s)
-        ''', (meal_id, meal['version'], json.dumps(dict(meal))))
-
         try:
             cursor.execute('''
                 INSERT INTO meal_ingredients (meal_id, ingredient_id, unit, quantity)
@@ -366,10 +344,9 @@ def add_meal_ingredient(meal_id):
                 SET version = version + 1, last_update = %s
                 WHERE id = %s
             ''', (datetime.datetime.utcnow().isoformat(), meal_id))
-            cursor.execute('''
-                INSERT INTO meal_history (meal_id, meal_version, composition)
-                VALUES (%s, %s, %s)
-            ''', (meal_id, meal['version'] + 1, json.dumps(data)))
+
+            create_meal_history(cursor, meal_id)
+
             conn.commit()
         except psycopg2.IntegrityError:
             conn.rollback()
@@ -455,14 +432,6 @@ def remove_meal_ingredient(meal_id, ingredient_id):
             conn.close()
             return verifivation
 
-        # Convert datetime objects to strings
-        meal['last_update'] = meal['last_update'].isoformat() if meal['last_update'] else None
-
-        cursor.execute('''
-            INSERT INTO meal_history (meal_id, meal_version, composition)
-            VALUES (%s, %s, %s)
-        ''', (meal_id, meal['version'], json.dumps(dict(meal))))
-
         try:
             cursor.execute('DELETE FROM meal_ingredients WHERE meal_id = %s AND ingredient_id = %s', (meal_id, ingredient_id))
             cursor.execute('''
@@ -470,10 +439,9 @@ def remove_meal_ingredient(meal_id, ingredient_id):
                 SET version = version + 1, last_update = %s
                 WHERE id = %s
             ''', (datetime.datetime.utcnow().isoformat(), meal_id))
-            cursor.execute('''
-                INSERT INTO meal_history (meal_id, meal_version, composition)
-                VALUES (%s, %s, %s)
-            ''', (meal_id, meal['version'] + 1, json.dumps(dict(meal))))
+
+            create_meal_history(cursor, meal_id)
+
             conn.commit()
         except psycopg2.IntegrityError:
             conn.rollback()

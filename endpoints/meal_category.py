@@ -1,8 +1,9 @@
 from flask import request, jsonify
-import psycopg2
 from psycopg2.extras import RealDictCursor
 from db_config import get_db_connection
 from endpoints.auth import login_required, verify_identity
+import datetime
+from endpoints.meal_history import create_meal_history
 
 @login_required
 def get_meal_categories():
@@ -54,7 +55,7 @@ def get_meal_categories():
         return jsonify({"error": str(e)}), 500
 
 @login_required
-def assign_category_to_meal(meal_id):
+def assign_category_to_meal(meal_id, category_id):
     """
     Assign a category to a meal
     ---
@@ -68,16 +69,11 @@ def assign_category_to_meal(meal_id):
         type: integer
         required: true
         description: The ID of the meal to assign the category to
-      - in: body
-        name: body
-        schema:
-          type: object
-          required:
-            - category_id
-          properties:
-            category_id:
-              type: integer
-              description: The ID of the category to assign
+      - in: path
+        name: category_id
+        type: integer
+        required: true
+        description: The ID of the category to assign
     responses:
       200:
         description: Category assigned to meal
@@ -109,10 +105,6 @@ def assign_category_to_meal(meal_id):
               type: string
     """
     try:
-        data = request.get_json()
-        if not data.get('category_id'):
-            return jsonify({"error": "category_id is required"}), 400
-
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
@@ -134,7 +126,7 @@ def assign_category_to_meal(meal_id):
             conn.close()
             return jsonify({"error": "Category is already assigned to this meal"}), 400
 
-        cursor.execute('SELECT * FROM meal_category WHERE id = %s', (data['category_id'],))
+        cursor.execute('SELECT * FROM meal_category WHERE id = %s', (category_id,))
         category = cursor.fetchone()
         if not category:
             cursor.close()
@@ -143,11 +135,14 @@ def assign_category_to_meal(meal_id):
 
         cursor.execute('''
             UPDATE meal
-            SET category_id = %s, version = version + 1
+            SET category_id = %s, version = version + 1, last_update = %s
             WHERE id = %s
-        ''', (category['id'], meal_id))
+        ''', (category['id'], datetime.datetime.utcnow().isoformat(), meal_id))
         conn.commit()
 
+        create_meal_history(cursor, meal_id)
+
+        conn.commit()
         cursor.close()
         conn.close()
 
@@ -228,11 +223,14 @@ def remove_category_from_meal(meal_id):
 
         cursor.execute('''
             UPDATE meal
-            SET category_id = NULL, version = version + 1
+            SET category_id = NULL, version = version + 1, last_update = %s
             WHERE id = %s
-        ''', (meal_id,))
+        ''', (datetime.datetime.utcnow().isoformat(), meal_id))
         conn.commit()
 
+        create_meal_history(cursor, meal_id)
+
+        conn.commit()
         cursor.close()
         conn.close()
 
@@ -245,7 +243,7 @@ def remove_category_from_meal(meal_id):
         return jsonify({"error": str(e)}), 500
 
 @login_required
-def update_category_of_meal(meal_id):
+def update_category_of_meal(meal_id, category_id):
     """
     Update the category of a meal
     ---
@@ -259,16 +257,11 @@ def update_category_of_meal(meal_id):
         type: integer
         required: true
         description: The ID of the meal to update the category for
-      - in: body
-        name: body
-        schema:
-          type: object
-          required:
-            - category_id
-          properties:
-            category_id:
-              type: integer
-              description: The ID of the new category
+      - in: path
+        name: category_id
+        type: integer
+        required: true
+        description: The ID of the new category
     responses:
       200:
         description: Category updated for meal
@@ -300,10 +293,6 @@ def update_category_of_meal(meal_id):
               type: string
     """
     try:
-        data = request.get_json()
-        if not data.get('category_id'):
-            return jsonify({"error": "category_id is required"}), 400
-
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
@@ -320,12 +309,7 @@ def update_category_of_meal(meal_id):
             conn.close()
             return verifivation
 
-        if meal['category_id'] is None:
-            cursor.close()
-            conn.close()
-            return jsonify({"error": "No category assigned to this meal"}), 400
-
-        cursor.execute('SELECT * FROM meal_category WHERE id = %s', (data['category_id'],))
+        cursor.execute('SELECT * FROM meal_category WHERE id = %s', (category_id,))
         category = cursor.fetchone()
         if not category:
             cursor.close()
@@ -334,11 +318,14 @@ def update_category_of_meal(meal_id):
 
         cursor.execute('''
             UPDATE meal
-            SET category_id = %s, version = version + 1
+            SET category_id = %s, version = version + 1, last_update = %s
             WHERE id = %s
-        ''', (category['id'], meal_id))
+        ''', (category['id'], datetime.datetime.utcnow().isoformat(), meal_id))
         conn.commit()
 
+        create_meal_history(cursor, meal_id)
+
+        conn.commit()
         cursor.close()
         conn.close()
 

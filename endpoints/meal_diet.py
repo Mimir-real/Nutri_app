@@ -2,9 +2,11 @@ from flask import request, jsonify
 from db_config import get_db_connection
 from psycopg2.extras import RealDictCursor
 from endpoints.auth import login_required, verify_identity
+from endpoints.meal_history import create_meal_history
+import datetime
 
 @login_required
-def assign_diet_to_meal(meal_id):
+def assign_diet_to_meal(meal_id, diet_id):
     """
     Assign a diet to a meal
     ---
@@ -18,16 +20,11 @@ def assign_diet_to_meal(meal_id):
         type: integer
         required: true
         description: The ID of the meal to assign the diet to
-      - in: body
-        name: body
-        schema:
-          type: object
-          required:
-            - diet_id
-          properties:
-            diet_id:
-              type: integer
-              description: The ID of the diet to assign
+      - in: path
+        name: diet_id
+        type: integer
+        required: true
+        description: The ID of the diet to assign
     responses:
       200:
         description: Diet assigned to meal
@@ -59,10 +56,6 @@ def assign_diet_to_meal(meal_id):
               type: string
     """
     try:
-        data = request.get_json()
-        if not data.get('diet_id'):
-            return jsonify({"error": "diet_id is required"}), 400
-
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
@@ -84,7 +77,7 @@ def assign_diet_to_meal(meal_id):
             conn.close()
             return jsonify({"error": "Diet is already assigned to this meal"}), 400
 
-        cursor.execute('SELECT * FROM diet WHERE id = %s', (data['diet_id'],))
+        cursor.execute('SELECT * FROM diet WHERE id = %s', (diet_id,))
         diet = cursor.fetchone()
         if not diet:
             cursor.close()
@@ -93,11 +86,14 @@ def assign_diet_to_meal(meal_id):
 
         cursor.execute('''
             UPDATE meal
-            SET diet_id = %s, version = version + 1
+            SET diet_id = %s, version = version + 1, last_update = %s
             WHERE id = %s
-        ''', (diet['id'], meal_id))
+        ''', (diet['id'], datetime.datetime.utcnow().isoformat(), meal_id))
         conn.commit()
 
+        create_meal_history(cursor, meal_id)
+
+        conn.commit()
         cursor.close()
         conn.close()
 
@@ -179,16 +175,18 @@ def remove_diet_from_meal(meal_id):
 
         cursor.execute('''
             UPDATE meal
-            SET diet_id = NULL, version = version + 1
+            SET diet_id = NULL, version = version + 1, last_update = %s
             WHERE id = %s
-        ''', (meal_id,))
+        ''', (datetime.datetime.utcnow().isoformat(), meal_id))
         conn.commit()
 
+        create_meal_history(cursor, meal_id)
+
+        conn.commit()
         cursor.close()
         conn.close()
 
         return jsonify({"message": "Diet removed from meal"}), 200
-
     except Exception as e:
         if cursor:
             cursor.close()
@@ -197,7 +195,7 @@ def remove_diet_from_meal(meal_id):
         return jsonify({"error": str(e)}), 500
 
 @login_required
-def update_diet_of_meal(meal_id):
+def update_diet_of_meal(meal_id, diet_id):
     """
     Update the diet of a meal
     ---
@@ -211,16 +209,11 @@ def update_diet_of_meal(meal_id):
         type: integer
         required: true
         description: The ID of the meal to update the diet for
-      - in: body
-        name: body
-        schema:
-          type: object
-          required:
-            - diet_id
-          properties:
-            diet_id:
-              type: integer
-              description: The ID of the new diet
+      - in: path
+        name: diet_id
+        type: integer
+        required: true
+        description: The ID of the new diet
     responses:
       200:
         description: Diet updated for meal
@@ -252,10 +245,6 @@ def update_diet_of_meal(meal_id):
               type: string
     """
     try:
-        data = request.get_json()
-        if not data.get('diet_id'):
-            return jsonify({"error": "diet_id is required"}), 400
-
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
@@ -272,12 +261,7 @@ def update_diet_of_meal(meal_id):
             conn.close()
             return verifivation
 
-        if meal['diet_id'] is None:
-            cursor.close()
-            conn.close()
-            return jsonify({"error": "No diet assigned to this meal"}), 400
-
-        cursor.execute('SELECT * FROM diet WHERE id = %s', (data['diet_id'],))
+        cursor.execute('SELECT * FROM diet WHERE id = %s', (diet_id,))
         diet = cursor.fetchone()
         if not diet:
             cursor.close()
@@ -286,11 +270,14 @@ def update_diet_of_meal(meal_id):
 
         cursor.execute('''
             UPDATE meal
-            SET diet_id = %s, version = version + 1
+            SET diet_id = %s, version = version + 1, last_update = %s
             WHERE id = %s
-        ''', (diet['id'], meal_id))
+        ''', (diet['id'], datetime.datetime.utcnow().isoformat(), meal_id))
         conn.commit()
 
+        create_meal_history(cursor, meal_id)
+
+        conn.commit()
         cursor.close()
         conn.close()
 

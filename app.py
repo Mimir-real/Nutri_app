@@ -108,16 +108,15 @@ app.add_url_rule('/meals/<int:meal_id>/nutrients', view_func=get_meal_nutrients,
 # Meal Categories Endpoints
 from endpoints.meal_category import assign_category_to_meal, remove_category_from_meal, update_category_of_meal, get_meal_categories
 app.add_url_rule('/meals/categories', view_func=get_meal_categories, methods=['GET'])
-app.add_url_rule('/meals/<int:meal_id>/category', view_func=assign_category_to_meal, methods=['POST'])
+app.add_url_rule('/meals/<int:meal_id>/category/<int:category_id>', view_func=assign_category_to_meal, methods=['POST'])
 app.add_url_rule('/meals/<int:meal_id>/category', view_func=remove_category_from_meal, methods=['DELETE'])
-app.add_url_rule('/meals/<int:meal_id>/category', view_func=update_category_of_meal, methods=['PUT'])
+app.add_url_rule('/meals/<int:meal_id>/category/<int:category_id>', view_func=update_category_of_meal, methods=['PUT'])
 
 # Meal Diet Endpoints
 from endpoints.meal_diet import assign_diet_to_meal, remove_diet_from_meal, update_diet_of_meal
-app.add_url_rule('/meals/<int:meal_id>/diet', view_func=assign_diet_to_meal, methods=['POST'])
+app.add_url_rule('/meals/<int:meal_id>/diet/<int:diet_id>', view_func=assign_diet_to_meal, methods=['POST'])
 app.add_url_rule('/meals/<int:meal_id>/diet', view_func=remove_diet_from_meal, methods=['DELETE'])
-app.add_url_rule('/meals/<int:meal_id>/diet', view_func=update_diet_of_meal, methods=['PUT'])
-
+app.add_url_rule('/meals/<int:meal_id>/diet/<int:diet_id>', view_func=update_diet_of_meal, methods=['PUT'])
 
 # Meal Ingredients Endpoints
 from endpoints.meal_ingredients import get_meal_ingredients, replace_meal_ingredients, add_meal_ingredient, remove_meal_ingredient

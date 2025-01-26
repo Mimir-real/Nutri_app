@@ -5,6 +5,7 @@ from psycopg2.extras import RealDictCursor
 from endpoints.auth import login_required, verify_identity
 from flask_jwt_extended import get_jwt_identity
 import json
+from endpoints.meal_history import create_meal_history
 
 @login_required
 def get_meals():
@@ -458,10 +459,7 @@ def create_meal():
                 VALUES (%s, %s, %s, %s)
             ''', (new_meal_id, ingredient['ingredient_id'], ingredient['unit'], ingredient['quantity']))
 
-        cursor.execute('''
-            INSERT INTO meal_history (meal_id, meal_version, composition)
-            VALUES (%s, %s, %s)
-        ''', (new_meal_id, 1, json.dumps(data)))
+        create_meal_history(cursor, new_meal_id)
 
         conn.commit()
         cursor.close()
@@ -568,15 +566,12 @@ def update_meal(meal_id):
         meal['last_update'] = meal['last_update'].isoformat() if meal['last_update'] else None
 
         cursor.execute('''
-            INSERT INTO meal_history (meal_id, meal_version, composition)
-            VALUES (%s, %s, %s)
-        ''', (meal_id, meal['version'], json.dumps(meal)))
-
-        cursor.execute('''
             UPDATE meal
             SET name = %s, description = %s, diet_id = %s, category_id = %s, version = version + 1, last_update = %s
             WHERE id = %s
         ''', (data.get('name', meal['name']), data.get('description', meal['description']), data.get('diet_id', meal['diet_id']), data.get('category_id', meal['category_id']), datetime.datetime.utcnow().isoformat(), meal_id))
+
+        create_meal_history(cursor, meal_id)
 
         conn.commit()
         cursor.close()

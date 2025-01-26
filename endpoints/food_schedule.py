@@ -410,6 +410,10 @@ def get_food_schedule_for_user(user_id):
               type: string
     """
     try:
+        verifivation = verify_identity(user_id, 'You can only get food schedules for yourself')
+        if verifivation is not None:
+            return verifivation
+            
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
@@ -493,6 +497,10 @@ def get_food_schedule_for_user_by_date(user_id, date):
               type: string
     """
     try:
+        verifivation = verify_identity(user_id, 'You can only get food schedules for yourself')
+        if verifivation is not None:
+            return verifivation
+
         start_date = datetime.strptime(date, '%d-%m-%Y')
         end_date = start_date + timedelta(days=1)
 

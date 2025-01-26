@@ -109,3 +109,80 @@
     12 |      14 |       2 | f
     13 |      18 |       3 | f
    ```
+
+### Meal
+
+   Tabela `meal` zawiera posiłki stworzone przez użytkowników oraz ich szczegóły (dieta, kategoria).
+
+   Dodatkowo każdy rekord zawiera wersję posiłku oraz timestamp ostatniej aktualizacji
+
+   Baza przed aktualizacją:
+   ```bash
+   SELECT * FROM meal WHERE id = 14;
+    id |       name       | description | creator_id | diet_id | category_id | version |        last_update         
+   ----+------------------+-------------+------------+---------+-------------+---------+----------------------------
+    14 | Płatki z mlekiem |             |         14 |       1 |           1 |       1 | 2025-01-26 16:38:00.094739
+   ```
+
+   Baza po aktualizacji:
+   ```bash
+   SELECT * FROM meal WHERE id = 14;
+    id |       name       |  description   | creator_id | diet_id | category_id | version |        last_update        
+   ----+------------------+----------------+------------+---------+-------------+---------+---------------------------
+    14 | Mleko z płatkami | Najpierw mleko |         14 |       1 |           1 |       2 | 2025-01-26 16:38:56.21142
+   ```
+
+   Pełny aktualny stan bazy:
+   ```bash
+   SELECT * FROM meal;
+    id |       name       |  description   | creator_id | diet_id | category_id | version |        last_update         
+   ----+------------------+----------------+------------+---------+-------------+---------+----------------------------
+    14 | Mleko z płatkami | Najpierw mleko |         14 |       1 |           1 |       2 | 2025-01-26 16:38:56.21142
+    16 | Coś Wege         | Ujdzie         |         14 |       3 |           4 |       1 | 2025-01-26 17:01:57.300402
+    17 | Mielone z ryżem  | Spoko obiad    |         18 |       1 |           3 |       1 | 2025-01-26 17:04:23.282463
+   ```
+
+### Meal_ingredients
+
+   Tabela `meal_ingredients` zawiera ...
+
+   ```bash
+   SELECT * FROM meal_ingredients;
+    id | meal_id | ingredient_id | unit | quantity 
+   ----+---------+---------------+------+----------
+    23 |      14 |        114368 | g    |      100
+    24 |      14 |       1072345 | g    |      250
+    27 |      16 |           180 | g    |      150
+    28 |      17 |       1030437 | g    |      500
+    29 |      17 |       1283820 | g    |     1000
+   ```
+
+### Meal_history
+
+   Tabela `meal_history` zawiera ...
+
+   ```bash
+   SELECT * FROM meal_history;
+    id |                                                                                                             composition                                                                                                              | meal_id | meal_version 
+   ----+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+--------------
+    32 | {"name": "P\u0142atki z mlekiem", "diet_id": 1, "category_id": 1, "ingredients": [{"ingredient_id": 114368, "unit": "g", "quantity": 100}, {"ingredient_id": 1072345, "unit": "g", "quantity": 250}]}                                |      14 |            1
+    33 | {"id": 14, "name": "P\u0142atki z mlekiem", "description": "", "creator_id": 14, "diet_id": 1, "category_id": 1, "version": 1, "last_update": "2025-01-26T16:38:00.094739"}                                                          |      14 |            1
+    35 | {"name": "Co\u015b Wege", "description": "Ujdzie", "diet_id": 3, "category_id": 4, "ingredients": [{"ingredient_id": 180, "unit": "g", "quantity": 150}]}                                                                            |      16 |            1
+    36 | {"name": "Mielone z ry\u017cem", "description": "Spoko obiad", "diet_id": 1, "category_id": 3, "ingredients": [{"ingredient_id": 1030437, "unit": "g", "quantity": 500}, {"ingredient_id": 1283820, "unit": "g", "quantity": 1000}]} |      17 |            1
+   ```
+
+### Food_schedule
+
+   Tabela `food_schedule` zawiera ... 
+
+   ```bash
+
+   ```
+
+### Food_Log
+
+   Tabela `food_log` zawiera ... 
+
+   ```bash
+
+   ```
