@@ -70,6 +70,8 @@ W takim przypadku należy użyć komendy z punktu 4 jeszcze raz (uruchomienie ap
 
 6. **Sprawdzenie działania**  
 
+   **UWAGA!** Za pierwszym razem, gdy wykonuje się inicjalizacja stanu początkowego bazy aplikacja do poprawnego działania może wymagać troche więcej czasu.
+
    Po uruchomieniu aplikacja powinna być dostępna pod adresem:
 
    ```bash
