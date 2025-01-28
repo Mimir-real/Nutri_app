@@ -26,11 +26,12 @@ Aby uruchomić aplikację w kontenerze Docker, wykonaj następujące kroki:
    Jeśli nie masz zainstalowanego Dockera, pobierz i zainstaluj go z [oficjalnej strony](https://www.docker.com/get-started).
 
 2. **Sklonuj repozytorium:**
-
+   
    ```bash
    git clone https://github.com/Mimir-real/bazany_danych_proj.git
    cd bazany_danych_proj
    ```
+   _(Zwróć uwagę na poprawny link do repozytorium)_
 
 3. **Dostosuj docker-compose.yml (opcjonalne)**
 
@@ -67,6 +68,7 @@ W takim przypadku należy użyć komendy z punktu 4 jeszcze raz (uruchomienie ap
   ```bash
   docker exec -i bazany_danych_proj-db-1 pg_restore -U postgres -v -d bazaDanych < db\backup.dump
   ```
+  _(`bazany_danych_proj-db-1` to kontener zawierający bazę pod aplikację, nazwa ta może się różnić. Upewnij się jak nazywa się twój kontener używając komendy `docker ps -a`)_
 
 6. **Sprawdzenie działania**  
 
